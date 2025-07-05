@@ -7,7 +7,7 @@
 Uma ferramenta web interativa e de código aberto, projetada para ajudar estudantes de flauta doce a praticar seus estudos. A aplicação gera exercícios melódicos aleatórios com base nas configurações do usuário, fornecendo feedback visual e auditivo em tempo real.
 
 <!-- Você pode adicionar um link para a aplicação online aqui -->
-**[Acesse a ferramenta ao vivo aqui!](https://jonatas-aquino.github.io/gerador-exercicios-flauta/)**
+**[Acesse a ferramenta ao vivo aqui!](https://jonatas07rocha.github.io/flautafacil/)**
 
 ---
 
