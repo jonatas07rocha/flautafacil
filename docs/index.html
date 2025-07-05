@@ -20,7 +20,7 @@
             --secondary-color: #F87171;
             --accent-color: #60A5FA;
             --share-color: #8B5CF6;
-            --metronome-color: #FBBF24;
+            --metronome-color: #FBBF24; /* Amarelo para o metrônomo */
             --text-color: #E5E7EB;
             --text-muted-color: #9CA3AF;
         }
@@ -29,7 +29,6 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             display: flex;
-            flex-direction: column; /* Alterado para coluna para acomodar o rodapé */
             justify-content: center;
             align-items: center;
             min-height: 100vh;
@@ -103,43 +102,18 @@
             color: #000000;
             border-radius: 1rem;
             padding: 1rem;
-            margin-bottom: 0.5rem;
-            min-height: 120px;
+            margin-bottom: 1rem;
+            min-height: 150px;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow-x: auto;
         }
-        .note-names-panel {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            justify-content: center;
-            align-items: center;
-            background-color: var(--panel-color);
-            padding: 1rem;
-            border-radius: 1rem;
-            min-height: 50px;
-            margin-bottom: 1rem;
-        }
-        .note-name-span {
-            font-family: 'Courier New', Courier, monospace;
-            font-weight: bold;
-            font-size: 1.2rem;
-            padding: 0.25rem 0.75rem;
-            border-radius: 0.5rem;
-            transition: all 0.2s ease-in-out;
-        }
-        .note-name-span.highlighted {
-            background-color: var(--accent-color);
-            color: white;
-        }
-        .placeholder-text {
+        #score-output.placeholder {
+            width: 100%;
             font-style: italic;
-            color: var(--text-muted-color);
-            font-family: 'Inter', sans-serif;
-            font-weight: normal;
-            font-size: 1rem;
+            color: #9CA3AF;
+            text-align: center;
         }
         .flute-diagram-panel {
             background-color: var(--panel-color);
@@ -230,13 +204,9 @@
             </button>
 
             <div class="score-panel">
-                <div id="score-output" class="placeholder-text">
-                    A partitura aparecerá aqui.
+                <div id="score-output" class="placeholder">
+                    Clique em "Gerar" para começar.
                 </div>
-            </div>
-
-            <div id="note-names-panel" class="note-names-panel">
-                 <div class="placeholder-text">Os nomes das notas aparecerão aqui.</div>
             </div>
 
             <div class="playback-controls mt-auto">
@@ -275,11 +245,6 @@
             </div>
         </div>
     </div>
-    
-    <!-- NOVO RODAPÉ -->
-    <footer class="text-center p-4 mt-4 text-xs text-gray-500">
-        <p>Copyright &copy; 2024 Jônatas de Aquino Rocha. Lançado sob a Licença MIT.</p>
-    </footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -288,7 +253,6 @@
             const shareBtn = document.getElementById('share-btn');
             const metronomeBtn = document.getElementById('metronome-btn');
             const scoreOutputEl = document.getElementById('score-output');
-            const noteNamesPanel = document.getElementById('note-names-panel');
             const bpmSlider = document.getElementById('bpm-slider');
             const bpmValueEl = document.getElementById('bpm-value');
             const difficultyButtonsContainer = document.getElementById('difficulty-buttons');
@@ -297,8 +261,9 @@
             let currentExercise = [];
             let audioContext;
             let isPlaying = false;
-            let metronomeEnabled = false;
+            let metronomeIntervalId = null;
             let timeoutIds = [];
+            let visualObj;
 
             const NOTE_NAMES = {
                 'c/4': 'Dó', 'd/4': 'Ré', 'e/4': 'Mi', 'f/4': 'Fá', 'g/4': 'Sol', 'a/4': 'Lá', 'b/4': 'Si',
@@ -381,34 +346,30 @@
                     currentExercise.push({ key: noteKey, duration });
                 }
                 
-                renderScoreAndNames();
+                renderScore();
                 updateFluteDiagram(null);
                 setButtonsState(false);
             }
 
-            function renderScoreAndNames() {
-                scoreOutputEl.innerHTML = '<div id="score-div"></div>';
-                noteNamesPanel.innerHTML = '';
+            function renderScore() {
+                scoreOutputEl.innerHTML = '';
+                scoreOutputEl.classList.remove('placeholder');
                 if (currentExercise.length === 0) return;
 
                 let abcString = `X:1\nM:4/4\nL:1/4\nK:${tonalitySelect.value}\n|`;
                 currentExercise.forEach(note => {
                     const abcNote = ABC_MAP[note.key] || '';
+                    const noteName = NOTE_NAMES[note.key] || '';
                     const abcDuration = DURATION_MAP[note.duration] || '1';
-                    abcString += `${abcNote}${abcDuration} `;
-
-                    const nameSpan = document.createElement('span');
-                    nameSpan.className = 'note-name-span';
-                    nameSpan.textContent = NOTE_NAMES[note.key] || note.key;
-                    noteNamesPanel.appendChild(nameSpan);
+                    abcString += `"${noteName}"${abcNote}${abcDuration} `;
                 });
 
-                ABCJS.renderAbc("score-div", abcString, { 
+                visualObj = ABCJS.renderAbc("score-output", abcString, { 
                     responsive: "resize",
                     staffwidth: 440,
-                    paddingleft: 0,
-                    paddingright: 0,
-                });
+                    paddingleft: 15,
+                    paddingright: 15,
+                })[0];
             }
 
             async function playExercise() {
@@ -424,24 +385,6 @@
                 const bpm = parseInt(bpmSlider.value, 10);
                 const quarterNoteDuration = 60 / bpm;
                 let cumulativeTime = 0;
-
-                const noteNameSpans = noteNamesPanel.querySelectorAll('.note-name-span');
-
-                if (metronomeBtn.classList.contains('active')) {
-                    const metronomeInterval = setInterval(() => {
-                        const tickTime = audioContext.currentTime;
-                        const osc = audioContext.createOscillator();
-                        const gain = audioContext.createGain();
-                        osc.frequency.setValueAtTime(1000, tickTime);
-                        gain.gain.setValueAtTime(0.5, tickTime);
-                        gain.gain.exponentialRampToValueAtTime(0.001, tickTime + 0.05);
-                        osc.connect(gain);
-                        gain.connect(audioContext.destination);
-                        osc.start(tickTime);
-                        osc.stop(tickTime + 0.05);
-                    }, quarterNoteDuration * 1000);
-                    timeoutIds.push(metronomeInterval);
-                }
 
                 currentExercise.forEach((note, index) => {
                     const freq = NOTES_INFO[note.key];
@@ -485,9 +428,25 @@
                     timeoutIds.push(setTimeout(() => {
                         updateFluteDiagram(note.key);
                         
-                        noteNameSpans.forEach(span => span.classList.remove('highlighted'));
-                        if (noteNameSpans[index]) {
-                            noteNameSpans[index].classList.add('highlighted');
+                        const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim();
+                        
+                        // Remove highlight from previous note
+                        const lastHighlighted = scoreOutputEl.querySelector('.highlighted-note');
+                        if (lastHighlighted) {
+                            lastHighlighted.setAttribute('fill', 'black');
+                            lastHighlighted.classList.remove('highlighted-note');
+                        }
+                        
+                        // Highlight current note
+                        if (visualObj && visualObj.lines[0].staff[0].voices[0][index]) {
+                            const noteElements = visualObj.lines[0].staff[0].voices[0][index].abselem.elemset;
+                            for (let i = 0; i < noteElements.length; i++) {
+                                if (noteElements[i].nodeName === 'path') {
+                                    noteElements[i].setAttribute("fill", accentColor);
+                                    noteElements[i].classList.add('highlighted-note');
+                                    break;
+                                }
+                            }
                         }
                     }, cumulativeTime * 1000));
 
@@ -498,10 +457,7 @@
             }
 
             function stopPlayback() {
-                timeoutIds.forEach(id => {
-                    clearTimeout(id);
-                    clearInterval(id);
-                });
+                timeoutIds.forEach(id => clearTimeout(id));
                 timeoutIds = [];
 
                 if (audioContext && audioContext.state === 'running') {
@@ -509,9 +465,47 @@
                 }
                 updateFluteDiagram(null);
                 
-                noteNamesPanel.querySelectorAll('.note-name-span').forEach(span => span.classList.remove('highlighted'));
+                const highlightedElement = scoreOutputEl.querySelector('.highlighted-note');
+                if (highlightedElement) {
+                    highlightedElement.setAttribute('fill', 'black');
+                    highlightedElement.classList.remove('highlighted-note');
+                }
                 
                 setButtonsState(false);
+            }
+
+            function toggleMetronome() {
+                if (metronomeIntervalId) {
+                    clearInterval(metronomeIntervalId);
+                    metronomeIntervalId = null;
+                    metronomeBtn.classList.remove('active');
+                } else {
+                    metronomeBtn.classList.add('active');
+                    const bpm = parseInt(bpmSlider.value, 10);
+                    const interval = 60 / bpm * 1000;
+                    
+                    const playTick = async () => {
+                        if (!audioContext || audioContext.state === 'closed') {
+                            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        }
+                        if (audioContext.state === 'suspended') {
+                            await audioContext.resume();
+                        }
+                        const tickTime = audioContext.currentTime;
+                        const osc = audioContext.createOscillator();
+                        const gain = audioContext.createGain();
+                        osc.frequency.setValueAtTime(1000, tickTime);
+                        gain.gain.setValueAtTime(0.5, tickTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, tickTime + 0.05);
+                        osc.connect(gain);
+                        gain.connect(audioContext.destination);
+                        osc.start(tickTime);
+                        osc.stop(tickTime + 0.05);
+                    };
+
+                    playTick(); // Toca imediatamente ao ligar
+                    metronomeIntervalId = setInterval(playTick, interval);
+                }
             }
 
             function showToast(message) {
@@ -560,11 +554,13 @@
             generateBtn.addEventListener('click', generateExercise);
             playBtn.addEventListener('click', playExercise);
             shareBtn.addEventListener('click', shareExercise);
-            metronomeBtn.addEventListener('click', () => {
-                metronomeBtn.classList.toggle('active');
-            });
+            metronomeBtn.addEventListener('click', toggleMetronome);
             bpmSlider.addEventListener('input', (e) => {
                 bpmValueEl.textContent = `${e.target.value} BPM`;
+                if (metronomeIntervalId) { // Se o metrônomo estiver ligado, ajusta o tempo
+                    toggleMetronome(); // Para o atual
+                    toggleMetronome(); // E reinicia com o novo BPM
+                }
             });
             
             difficultyButtonsContainer.addEventListener('click', (e) => {
@@ -576,4 +572,3 @@
     </script>
 </body>
 </html>
-
