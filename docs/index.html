@@ -20,7 +20,7 @@
             --secondary-color: #F87171;
             --accent-color: #60A5FA;
             --share-color: #8B5CF6;
-            --metronome-color: #FBBF24; /* Amarelo para o metrônomo */
+            --metronome-color: #FBBF24;
             --text-color: #E5E7EB;
             --text-muted-color: #9CA3AF;
         }
@@ -29,6 +29,7 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
@@ -102,18 +103,44 @@
             color: #000000;
             border-radius: 1rem;
             padding: 1rem;
-            margin-bottom: 1rem;
-            min-height: 150px;
+            margin-bottom: 0.5rem;
+            min-height: 120px;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow-x: auto;
         }
-        #score-output.placeholder {
-            width: 100%;
+        .note-names-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--panel-color);
+            padding: 1rem;
+            border-radius: 1rem;
+            min-height: 50px;
+            margin-bottom: 1rem;
+        }
+        .note-name-span {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 1.2rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease-in-out;
+            color: var(--text-color);
+        }
+        .note-name-span.highlighted {
+            background-color: var(--accent-color);
+            color: var(--panel-color);
+        }
+        .placeholder-text {
             font-style: italic;
-            color: #9CA3AF;
-            text-align: center;
+            color: var(--text-muted-color);
+            font-family: 'Inter', sans-serif;
+            font-weight: normal;
+            font-size: 1rem;
         }
         .flute-diagram-panel {
             background-color: var(--panel-color);
@@ -204,9 +231,13 @@
             </button>
 
             <div class="score-panel">
-                <div id="score-output" class="placeholder">
-                    Clique em "Gerar" para começar.
+                <div id="score-output" class="placeholder-text">
+                    A partitura aparecerá aqui.
                 </div>
+            </div>
+
+            <div id="note-names-panel" class="note-names-panel">
+                 <div class="placeholder-text">Os nomes das notas aparecerão aqui.</div>
             </div>
 
             <div class="playback-controls mt-auto">
@@ -245,6 +276,10 @@
             </div>
         </div>
     </div>
+    
+    <footer class="text-center p-4 mt-4 text-xs text-gray-500">
+        <p>Copyright &copy; 2024 Jônatas de Aquino Rocha. Lançado sob a Licença MIT.</p>
+    </footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -253,6 +288,7 @@
             const shareBtn = document.getElementById('share-btn');
             const metronomeBtn = document.getElementById('metronome-btn');
             const scoreOutputEl = document.getElementById('score-output');
+            const noteNamesPanel = document.getElementById('note-names-panel');
             const bpmSlider = document.getElementById('bpm-slider');
             const bpmValueEl = document.getElementById('bpm-value');
             const difficultyButtonsContainer = document.getElementById('difficulty-buttons');
@@ -263,48 +299,14 @@
             let isPlaying = false;
             let metronomeIntervalId = null;
             let timeoutIds = [];
-            let visualObj;
 
-            const NOTE_NAMES = {
-                'c/4': 'Dó', 'd/4': 'Ré', 'e/4': 'Mi', 'f/4': 'Fá', 'g/4': 'Sol', 'a/4': 'Lá', 'b/4': 'Si',
-                'c/5': 'Dó', 'd/5': 'Ré', 'e/5': 'Mi', 'f/5': 'Fá', 'g/5': 'Sol',
-                'f#/4': 'F#', 'bb/4': 'Bb', 'f#/5': 'F#'
-            };
-
-            const NOTES_INFO = {
-                'c/4': 261.63, 'd/4': 293.66, 'e/4': 329.63, 'f/4': 349.23, 'g/4': 392.00, 'a/4': 440.00, 'b/4': 493.88, 'c/5': 523.25,
-                'd/5': 587.33, 'e/5': 659.25, 'f/5': 698.46, 'g/5': 783.99,
-                'f#/4': 369.99, 'bb/4': 466.16, 'f#/5': 739.99
-            };
+            const NOTE_NAMES = { 'c/4': 'Dó', 'd/4': 'Ré', 'e/4': 'Mi', 'f/4': 'Fá', 'g/4': 'Sol', 'a/4': 'Lá', 'b/4': 'Si', 'c/5': 'Dó', 'd/5': 'Ré', 'e/5': 'Mi', 'f/5': 'Fá', 'g/5': 'Sol', 'f#/4': 'F#', 'bb/4': 'Bb', 'f#/5': 'F#' };
+            const NOTES_INFO = { 'c/4': 261.63, 'd/4': 293.66, 'e/4': 329.63, 'f/4': 349.23, 'g/4': 392.00, 'a/4': 440.00, 'b/4': 493.88, 'c/5': 523.25, 'd/5': 587.33, 'e/5': 659.25, 'f/5': 698.46, 'g/5': 783.99, 'f#/4': 369.99, 'bb/4': 466.16, 'f#/5': 739.99 };
             NOTES_INFO['a#/4'] = NOTES_INFO['bb/4'];
-
-            const FINGERINGS = {
-                'c/4': [true, true, true, true, true, true, true, true], 'd/4': [true, true, true, true, true, true, true, false],
-                'e/4': [true, true, true, true, true, true, false, false], 'f/4': [true, true, true, true, true, false, true, true],
-                'g/4': [true, true, true, true, false, false, false, false], 'a/4': [true, true, true, false, false, false, false, false],
-                'b/4': [true, true, false, false, false, false, false, false], 'c/5': [false, true, true, false, false, false, false, false],
-                'd/5': [false, true, false, false, false, false, false, false], 'e/5': [false, true, true, true, true, true, false, false],
-                'f/5': [false, true, true, true, true, false, true, false], 'g/5': [false, true, true, true, false, false, false, false],
-                'f#/4': [true, true, true, true, true, false, true, false], 'bb/4': [true, true, false, true, true, false, false, false],
-                'f#/5': [false, true, true, false, true, true, false, false]
-            };
-
-            const SCALES = {
-                'C':  ['c/4', 'd/4', 'e/4', 'f/4', 'g/4', 'a/4', 'b/4', 'c/5'], 'G':  ['g/4', 'a/4', 'b/4', 'c/5', 'd/5', 'e/5', 'f#/5', 'g/5'],
-                'F':  ['f/4', 'g/4', 'a/4', 'bb/4', 'c/5', 'd/5', 'e/5', 'f/5'], 'Am': ['a/4', 'b/4', 'c/5', 'd/5', 'e/5', 'f/4', 'g/4']
-            };
-            
-            const DIFFICULTY_LEVELS = {
-                iniciante: { notes: 5, durations: ['h', 'q'], notePoolSize: 5 },
-                intermediario: { notes: 8, durations: ['h', 'q', '8'], notePoolSize: 7 },
-                avancado: { notes: 12, durations: ['q', '8', '16'], notePoolSize: 8 }
-            };
-
-            const ABC_MAP = {
-                'c/4': 'C', 'd/4': 'D', 'e/4': 'E', 'f/4': 'F', 'g/4': 'G', 'a/4': 'A', 'b/4': 'B',
-                'c/5': 'c', 'd/5': 'd', 'e/5': 'e', 'f/5': 'f', 'g/5': 'g',
-                'f#/4': '^F', 'bb/4': '_B', 'f#/5': '^f'
-            };
+            const FINGERINGS = { 'c/4': [true, true, true, true, true, true, true, true], 'd/4': [true, true, true, true, true, true, true, false], 'e/4': [true, true, true, true, true, true, false, false], 'f/4': [true, true, true, true, true, false, true, true], 'g/4': [true, true, true, true, false, false, false, false], 'a/4': [true, true, true, false, false, false, false, false], 'b/4': [true, true, false, false, false, false, false, false], 'c/5': [false, true, true, false, false, false, false, false], 'd/5': [false, true, false, false, false, false, false, false], 'e/5': [false, true, true, true, true, true, false, false], 'f/5': [false, true, true, true, true, false, true, false], 'g/5': [false, true, true, true, false, false, false, false], 'f#/4': [true, true, true, true, true, false, true, false], 'bb/4': [true, true, false, true, true, false, false, false], 'f#/5': [false, true, true, false, true, true, false, false] };
+            const SCALES = { 'C':  ['c/4', 'd/4', 'e/4', 'f/4', 'g/4', 'a/4', 'b/4', 'c/5'], 'G':  ['g/4', 'a/4', 'b/4', 'c/5', 'd/5', 'e/5', 'f#/5', 'g/5'], 'F':  ['f/4', 'g/4', 'a/4', 'bb/4', 'c/5', 'd/5', 'e/5', 'f/5'], 'Am': ['a/4', 'b/4', 'c/5', 'd/5', 'e/5', 'f/4', 'g/4'] };
+            const DIFFICULTY_LEVELS = { iniciante: { notes: 5, durations: ['h', 'q'], notePoolSize: 5 }, intermediario: { notes: 8, durations: ['h', 'q', '8'], notePoolSize: 7 }, avancado: { notes: 12, durations: ['q', '8', '16'], notePoolSize: 8 } };
+            const ABC_MAP = { 'c/4': 'C', 'd/4': 'D', 'e/4': 'E', 'f/4': 'F', 'g/4': 'G', 'a/4': 'A', 'b/4': 'B', 'c/5': 'c', 'd/5': 'd', 'e/5': 'e', 'f/5': 'f', 'g/5': 'g', 'f#/4': '^F', 'bb/4': '_B', 'f#/5': '^f' };
             const DURATION_MAP = { 'q': '1', 'h': '2', '8': '/2', '16': '/4' };
 
             function setButtonsState(playing) {
@@ -329,51 +331,78 @@
 
             function generateExercise() {
                 stopPlayback();
-                
                 const activeDifficultyBtn = difficultyButtonsContainer.querySelector('.active');
                 const difficulty = activeDifficultyBtn.dataset.difficulty;
                 const tonality = tonalitySelect.value;
-
                 const { notes: numNotes, durations, notePoolSize } = DIFFICULTY_LEVELS[difficulty];
                 const scale = SCALES[tonality];
                 const poolSize = Math.min(notePoolSize, scale.length);
                 const notePool = scale.slice(0, poolSize);
-
                 currentExercise = [];
                 for (let i = 0; i < numNotes; i++) {
                     const noteKey = notePool[Math.floor(Math.random() * notePool.length)];
                     const duration = durations[Math.floor(Math.random() * durations.length)];
                     currentExercise.push({ key: noteKey, duration });
                 }
-                
-                renderScore();
+                renderScoreAndNames();
                 updateFluteDiagram(null);
                 setButtonsState(false);
             }
-
-            function renderScore() {
+            
+            function renderScoreAndNames() {
                 scoreOutputEl.innerHTML = '';
-                scoreOutputEl.classList.remove('placeholder');
-                if (currentExercise.length === 0) return;
+                noteNamesPanel.innerHTML = '';
 
+                if (currentExercise.length === 0) {
+                     scoreOutputEl.innerHTML = '<div class="placeholder-text">A partitura aparecerá aqui.</div>';
+                     noteNamesPanel.innerHTML = '<div class="placeholder-text">Os nomes das notas aparecerão aqui.</div>';
+                     return;
+                }
+                
+                // String para a partitura, sem nomes de notas para evitar problemas.
                 let abcString = `X:1\nM:4/4\nL:1/4\nK:${tonalitySelect.value}\n|`;
+                
                 currentExercise.forEach(note => {
+                    // 1. Adiciona a nota à string da partitura
                     const abcNote = ABC_MAP[note.key] || '';
-                    const noteName = NOTE_NAMES[note.key] || '';
                     const abcDuration = DURATION_MAP[note.duration] || '1';
-                    abcString += `"${noteName}"${abcNote}${abcDuration} `;
-                });
+                    abcString += `${abcNote}${abcDuration} `;
 
-                visualObj = ABCJS.renderAbc("score-output", abcString, { 
-                    responsive: "resize",
+                    // 2. Cria o span com o nome da nota para o painel separado
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'note-name-span';
+                    nameSpan.textContent = NOTE_NAMES[note.key] || note.key;
+                    noteNamesPanel.appendChild(nameSpan);
+                });
+                
+                ABCJS.renderAbc(scoreOutputEl, abcString, { 
+                    responsive: "resize", 
                     staffwidth: 440,
                     paddingleft: 15,
-                    paddingright: 15,
-                })[0];
+                    paddingright: 15
+                });
+            }
+            
+            function playMetronomeTick(context, time) {
+                const osc = context.createOscillator();
+                const gain = context.createGain();
+                osc.frequency.setValueAtTime(1000, time);
+                gain.gain.setValueAtTime(0.5, time);
+                gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+                osc.connect(gain);
+                gain.connect(context.destination);
+                osc.start(time);
+                osc.stop(time + 0.05);
             }
 
             async function playExercise() {
                 if (isPlaying || currentExercise.length === 0) return;
+                
+                const metronomeWasOn = metronomeIntervalId !== null;
+                if (metronomeWasOn) {
+                    clearInterval(metronomeIntervalId);
+                    metronomeIntervalId = null;
+                }
                 
                 if (!audioContext || audioContext.state === 'closed') {
                      audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -385,6 +414,25 @@
                 const bpm = parseInt(bpmSlider.value, 10);
                 const quarterNoteDuration = 60 / bpm;
                 let cumulativeTime = 0;
+                const noteNameSpans = noteNamesPanel.querySelectorAll('.note-name-span');
+
+                if (metronomeWasOn) {
+                    let totalDuration = 0;
+                    currentExercise.forEach(note => {
+                         switch(note.duration) {
+                            case 'h': totalDuration += quarterNoteDuration * 2; break;
+                            case 'q': totalDuration += quarterNoteDuration; break;
+                            case '8': totalDuration += quarterNoteDuration / 2; break;
+                            case '16': totalDuration += quarterNoteDuration / 4; break;
+                            default: totalDuration += quarterNoteDuration;
+                        }
+                    });
+                    const totalBeats = Math.floor(totalDuration / quarterNoteDuration);
+                    for (let beat = 0; beat < totalBeats; beat++) {
+                        const tickTime = audioContext.currentTime + (beat * quarterNoteDuration);
+                        playMetronomeTick(audioContext, tickTime);
+                    }
+                }
 
                 currentExercise.forEach((note, index) => {
                     const freq = NOTES_INFO[note.key];
@@ -409,7 +457,6 @@
                         oscillator2.type = 'sine';
                         oscillator2.frequency.setValueAtTime(freq * 1.005, noteStartTime);
                         oscillator2.connect(gainNode);
-
                         const attackTime = 0.02;
                         const peakVolume = 0.25;
                         gainNode.gain.setValueAtTime(0, noteStartTime);
@@ -418,7 +465,6 @@
                         const noteEndTime = noteStartTime + durationInSeconds * 0.95;
                         gainNode.gain.setValueAtTime(peakVolume * 0.8, noteEndTime - 0.05);
                         gainNode.gain.linearRampToValueAtTime(0, noteEndTime);
-
                         oscillator.start(noteStartTime);
                         oscillator2.start(noteStartTime);
                         oscillator.stop(noteEndTime);
@@ -427,36 +473,20 @@
 
                     timeoutIds.push(setTimeout(() => {
                         updateFluteDiagram(note.key);
-                        
-                        const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim();
-                        
-                        // Remove highlight from previous note
-                        const lastHighlighted = scoreOutputEl.querySelector('.highlighted-note');
-                        if (lastHighlighted) {
-                            lastHighlighted.setAttribute('fill', 'black');
-                            lastHighlighted.classList.remove('highlighted-note');
-                        }
-                        
-                        // Highlight current note
-                        if (visualObj && visualObj.lines[0].staff[0].voices[0][index]) {
-                            const noteElements = visualObj.lines[0].staff[0].voices[0][index].abselem.elemset;
-                            for (let i = 0; i < noteElements.length; i++) {
-                                if (noteElements[i].nodeName === 'path') {
-                                    noteElements[i].setAttribute("fill", accentColor);
-                                    noteElements[i].classList.add('highlighted-note');
-                                    break;
-                                }
-                            }
+                        // Lógica de highlight para o painel de nomes de notas
+                        noteNameSpans.forEach(span => span.classList.remove('highlighted'));
+                        if (noteNameSpans[index]) {
+                            noteNameSpans[index].classList.add('highlighted');
                         }
                     }, cumulativeTime * 1000));
 
                     cumulativeTime += durationInSeconds;
                 });
 
-                timeoutIds.push(setTimeout(stopPlayback, cumulativeTime * 1000));
+                timeoutIds.push(setTimeout(() => stopPlayback(metronomeWasOn), cumulativeTime * 1000));
             }
 
-            function stopPlayback() {
+            function stopPlayback(restartMetronome = false) {
                 timeoutIds.forEach(id => clearTimeout(id));
                 timeoutIds = [];
 
@@ -464,11 +494,10 @@
                     audioContext.close().catch(console.error);
                 }
                 updateFluteDiagram(null);
+                noteNamesPanel.querySelectorAll('.note-name-span').forEach(span => span.classList.remove('highlighted'));
                 
-                const highlightedElement = scoreOutputEl.querySelector('.highlighted-note');
-                if (highlightedElement) {
-                    highlightedElement.setAttribute('fill', 'black');
-                    highlightedElement.classList.remove('highlighted-note');
+                if (restartMetronome) {
+                    toggleMetronome();
                 }
                 
                 setButtonsState(false);
@@ -484,38 +513,27 @@
                     const bpm = parseInt(bpmSlider.value, 10);
                     const interval = 60 / bpm * 1000;
                     
-                    const playTick = async () => {
+                    const playTickAsync = async () => {
                         if (!audioContext || audioContext.state === 'closed') {
                             audioContext = new (window.AudioContext || window.webkitAudioContext)();
                         }
                         if (audioContext.state === 'suspended') {
                             await audioContext.resume();
                         }
-                        const tickTime = audioContext.currentTime;
-                        const osc = audioContext.createOscillator();
-                        const gain = audioContext.createGain();
-                        osc.frequency.setValueAtTime(1000, tickTime);
-                        gain.gain.setValueAtTime(0.5, tickTime);
-                        gain.gain.exponentialRampToValueAtTime(0.001, tickTime + 0.05);
-                        osc.connect(gain);
-                        gain.connect(audioContext.destination);
-                        osc.start(tickTime);
-                        osc.stop(tickTime + 0.05);
+                        playMetronomeTick(audioContext, audioContext.currentTime);
                     };
 
-                    playTick(); // Toca imediatamente ao ligar
-                    metronomeIntervalId = setInterval(playTick, interval);
+                    playTickAsync();
+                    metronomeIntervalId = setInterval(playTickAsync, interval);
                 }
             }
-
+            
             function showToast(message) {
                 const toast = document.createElement('div');
                 toast.textContent = message;
                 toast.className = 'fixed bottom-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg z-50';
                 document.body.appendChild(toast);
-                setTimeout(() => {
-                    toast.remove();
-                }, 3000);
+                setTimeout(() => { toast.remove(); }, 3000);
             }
 
             function copyToClipboard(text) {
@@ -537,13 +555,11 @@
 
             function shareExercise() {
                 if (currentExercise.length === 0) return;
-
                 const exerciseText = currentExercise.map(note => NOTE_NAMES[note.key] || note.key).join(' - ');
                 const shareData = {
                     title: 'Exercício de Flauta Doce',
                     text: `Pratique este exercício que eu gerei: ${exerciseText}`,
                 };
-
                 if (navigator.share) {
                     navigator.share(shareData).catch(err => console.error("Erro ao compartilhar", err));
                 } else {
@@ -553,13 +569,14 @@
 
             generateBtn.addEventListener('click', generateExercise);
             playBtn.addEventListener('click', playExercise);
-            shareBtn.addEventListener('click', shareExercise);
             metronomeBtn.addEventListener('click', toggleMetronome);
+            shareBtn.addEventListener('click', shareExercise);
+
             bpmSlider.addEventListener('input', (e) => {
                 bpmValueEl.textContent = `${e.target.value} BPM`;
-                if (metronomeIntervalId) { // Se o metrônomo estiver ligado, ajusta o tempo
-                    toggleMetronome(); // Para o atual
-                    toggleMetronome(); // E reinicia com o novo BPM
+                if (metronomeIntervalId) {
+                    toggleMetronome();
+                    toggleMetronome();
                 }
             });
             
