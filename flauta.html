@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Exercícios para Flauta Doce</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.0/dist/abcjs-basic-min.js"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪈</text></svg>">
+    <style>
+        :root {
+            --bg-color: #121826;
+            --surface-color: #1A202C;
+            --panel-color: #111827;
+            --primary-color: #34D399;
+            --secondary-color: #F87171;
+            --accent-color: #60A5FA;
+            --share-color: #8B5CF6;
+            --metronome-color: #FBBF24;
+            --text-color: #E5E7EB;
+            --text-muted-color: #9CA3AF;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column; /* Alterado para coluna para acomodar o rodapé */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+        .main-container {
+            width: 100%;
+            max-width: 900px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            background-color: var(--surface-color);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        @media (max-width: 800px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        .left-column { display: flex; flex-direction: column; }
+        .right-column { display: flex; flex-direction: column; justify-content: center; }
+        .settings-panel {
+            background-color: var(--panel-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.2);
+        }
+        .settings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .setting-group label { display: block; font-weight: 600; margin-bottom: 0.75rem; color: var(--text-muted-color); }
+        .difficulty-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+        .difficulty-button {
+            background-color: #374151;
+            color: var(--text-color);
+            border: 1px solid #4B5563;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            text-align: center;
+        }
+        .difficulty-button.active {
+            background-color: var(--primary-color);
+            color: var(--panel-color);
+            border-color: var(--primary-color);
+            font-weight: 700;
+        }
+        .difficulty-button:disabled, .custom-select:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.5); }
+        .custom-select {
+            width: 100%;
+            background-color: #374151;
+            border: 1px solid #4B5563;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            color: var(--text-color);
+            -webkit-appearance: none;
+            appearance: none;
+              background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239CA3AF' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+              background-position: right 0.5rem center;
+              background-repeat: no-repeat;
+              background-size: 1.5em 1.5em;
+        }
+        .score-panel {
+            background-color: #FFFFFF;
+            color: #000000;
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: auto;
+        }
+        .note-names-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--panel-color);
+            padding: 1rem;
+            border-radius: 1rem;
+            min-height: 50px;
+            margin-bottom: 1rem;
+        }
+        .note-name-span {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 1.2rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease-in-out;
+        }
+        .note-name-span.highlighted {
+            background-color: var(--accent-color);
+            color: white;
+        }
+        .placeholder-text {
+            font-style: italic;
+            color: var(--text-muted-color);
+            font-family: 'Inter', sans-serif;
+            font-weight: normal;
+            font-size: 1rem;
+        }
+        .flute-diagram-panel {
+            background-color: var(--panel-color);
+            border-radius: 1rem;
+            padding: 2rem 1rem;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .flute-svg { stroke-linecap: round; stroke-linejoin: round; max-height: 100%; }
+        .flute-hole { 
+            fill: var(--surface-color); 
+            stroke: var(--text-muted-color); 
+            stroke-width: 1.5;
+            transition: fill 0.1s ease-in-out;
+        }
+        .flute-hole.closed {
+            fill: var(--accent-color);
+        }
+        .flute-body { fill: none; stroke: var(--text-color); stroke-width: 1.5; }
+        .playback-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+        .control-button {
+            background-color: #374151;
+            color: var(--text-color);
+            border: none;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .control-button:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+        .control-button i { font-size: 1.25rem; }
+        #generate-btn { grid-column: 1 / -1; background-color: var(--primary-color); color: var(--panel-color); }
+        #play-btn { background-color: var(--accent-color); }
+        #share-btn { background-color: var(--share-color); }
+        #metronome-btn { background-color: #4B5563; }
+        #metronome-btn.active {
+            background-color: var(--metronome-color);
+            color: var(--panel-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <div class="left-column">
+            <h1 class="text-2xl font-bold text-center mb-4" style="color: var(--primary-color);">Gerador de Exercícios para Flauta Doce</h1>
+
+            <div class="settings-panel">
+                <div class="settings-grid">
+                    <div class="setting-group">
+                        <label>Dificuldade</label>
+                        <div id="difficulty-buttons" class="difficulty-buttons">
+                            <button class="difficulty-button active" data-difficulty="iniciante">Iniciante</button>
+                            <button class="difficulty-button" data-difficulty="intermediario">Intermediário</button>
+                            <button class="difficulty-button" data-difficulty="avancado">Avançado</button>
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <label>Tonalidade</label>
+                        <select id="tonality-select" class="custom-select">
+                            <option value="C">Dó Maior</option>
+                            <option value="G">Sol Maior</option>
+                            <option value="F">Fá Maior</option>
+                            <option value="Am">Lá Menor</option>
+                        </select>
+                    </div>
+                </div>
+                 <div class="setting-group mt-4">
+                    <label class="flex justify-between items-center">
+                        <span>Andamento</span>
+                        <span id="bpm-value" class="font-bold text-white">100 BPM</span>
+                    </label>
+                    <input type="range" id="bpm-slider" min="40" max="200" value="100" class="w-full h-2 bg-gray-700 rounded-lg appearance-none">
+                </div>
+            </div>
+            
+            <button id="generate-btn" class="control-button my-4">
+                <i class="ph-bold ph-music-notes-plus"></i>
+                <span>Gerar Novo Exercício</span>
+            </button>
+
+            <div class="score-panel">
+                <div id="score-output" class="placeholder-text">
+                    A partitura aparecerá aqui.
+                </div>
+            </div>
+
+            <div id="note-names-panel" class="note-names-panel">
+                 <div class="placeholder-text">Os nomes das notas aparecerão aqui.</div>
+            </div>
+
+            <div class="playback-controls mt-auto">
+                <button id="play-btn" class="control-button" disabled>
+                    <i class="ph-bold ph-play"></i>
+                    <span>Tocar</span>
+                </button>
+                <button id="metronome-btn" class="control-button">
+                    <i class="ph-bold ph-metronome"></i>
+                    <span>Metrônomo</span>
+                </button>
+                <button id="share-btn" class="control-button" disabled>
+                    <i class="ph-bold ph-share-network"></i>
+                    <span>Compartilhar</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="right-column">
+            <div id="flute-diagram-container" class="flute-diagram-panel">
+                 <svg width="150" height="500" viewBox="0 0 100 350" class="flute-svg">
+                    <g transform="translate(20, 0)">
+                        <path d="M 20 25 L 20 335 C 20 345, 50 345, 50 335 L 50 25 C 50 15, 20 15, 20 25" class="flute-body" />
+                        <circle data-hole-id="1" class="flute-hole" cx="35" cy="60" r="8"/>
+                        <circle data-hole-id="2" class="flute-hole" cx="35" cy="90" r="8"/>
+                        <circle data-hole-id="3" class="flute-hole" cx="35" cy="120" r="8"/>
+                        <circle data-hole-id="4" class="flute-hole" cx="35" cy="165" r="8"/>
+                        <circle data-hole-id="5" class="flute-hole" cx="35" cy="195" r="7"/>
+                        <circle data-hole-id="6" class="flute-hole" cx="32" cy="240" r="5"/>
+                        <circle data-hole-id="6" class="flute-hole" cx="42" cy="243" r="5"/>
+                        <circle data-hole-id="7" class="flute-hole" cx="32" cy="270" r="5"/>
+                        <circle data-hole-id="7" class="flute-hole" cx="42" cy="273" r="5"/>
+                    </g>
+                    <circle data-hole-id="0" class="flute-hole" cx="85" cy="75" r="8"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <!-- NOVO RODAPÉ -->
+    <footer class="text-center p-4 mt-4 text-xs text-gray-500">
+        <p>Copyright &copy; 2024 Jônatas de Aquino Rocha. Lançado sob a Licença MIT.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const generateBtn = document.getElementById('generate-btn');
+            const playBtn = document.getElementById('play-btn');
+            const shareBtn = document.getElementById('share-btn');
+            const metronomeBtn = document.getElementById('metronome-btn');
+            const scoreOutputEl = document.getElementById('score-output');
+            const noteNamesPanel = document.getElementById('note-names-panel');
+            const bpmSlider = document.getElementById('bpm-slider');
+            const bpmValueEl = document.getElementById('bpm-value');
+            const difficultyButtonsContainer = document.getElementById('difficulty-buttons');
+            const tonalitySelect = document.getElementById('tonality-select');
+
+            let currentExercise = [];
+            let audioContext;
+            let isPlaying = false;
+            let metronomeEnabled = false;
+            let timeoutIds = [];
+
+            const NOTE_NAMES = {
+                'c/4': 'Dó', 'd/4': 'Ré', 'e/4': 'Mi', 'f/4': 'Fá', 'g/4': 'Sol', 'a/4': 'Lá', 'b/4': 'Si',
+                'c/5': 'Dó', 'd/5': 'Ré', 'e/5': 'Mi', 'f/5': 'Fá', 'g/5': 'Sol',
+                'f#/4': 'F#', 'bb/4': 'Bb', 'f#/5': 'F#'
+            };
+
+            const NOTES_INFO = {
+                'c/4': 261.63, 'd/4': 293.66, 'e/4': 329.63, 'f/4': 349.23, 'g/4': 392.00, 'a/4': 440.00, 'b/4': 493.88, 'c/5': 523.25,
+                'd/5': 587.33, 'e/5': 659.25, 'f/5': 698.46, 'g/5': 783.99,
+                'f#/4': 369.99, 'bb/4': 466.16, 'f#/5': 739.99
+            };
+            NOTES_INFO['a#/4'] = NOTES_INFO['bb/4'];
+
+            const FINGERINGS = {
+                'c/4': [true, true, true, true, true, true, true, true], 'd/4': [true, true, true, true, true, true, true, false],
+                'e/4': [true, true, true, true, true, true, false, false], 'f/4': [true, true, true, true, true, false, true, true],
+                'g/4': [true, true, true, true, false, false, false, false], 'a/4': [true, true, true, false, false, false, false, false],
+                'b/4': [true, true, false, false, false, false, false, false], 'c/5': [false, true, true, false, false, false, false, false],
+                'd/5': [false, true, false, false, false, false, false, false], 'e/5': [false, true, true, true, true, true, false, false],
+                'f/5': [false, true, true, true, true, false, true, false], 'g/5': [false, true, true, true, false, false, false, false],
+                'f#/4': [true, true, true, true, true, false, true, false], 'bb/4': [true, true, false, true, true, false, false, false],
+                'f#/5': [false, true, true, false, true, true, false, false]
+            };
+
+            const SCALES = {
+                'C':  ['c/4', 'd/4', 'e/4', 'f/4', 'g/4', 'a/4', 'b/4', 'c/5'], 'G':  ['g/4', 'a/4', 'b/4', 'c/5', 'd/5', 'e/5', 'f#/5', 'g/5'],
+                'F':  ['f/4', 'g/4', 'a/4', 'bb/4', 'c/5', 'd/5', 'e/5', 'f/5'], 'Am': ['a/4', 'b/4', 'c/5', 'd/5', 'e/5', 'f/4', 'g/4']
+            };
+            
+            const DIFFICULTY_LEVELS = {
+                iniciante: { notes: 5, durations: ['h', 'q'], notePoolSize: 5 },
+                intermediario: { notes: 8, durations: ['h', 'q', '8'], notePoolSize: 7 },
+                avancado: { notes: 12, durations: ['q', '8', '16'], notePoolSize: 8 }
+            };
+
+            const ABC_MAP = {
+                'c/4': 'C', 'd/4': 'D', 'e/4': 'E', 'f/4': 'F', 'g/4': 'G', 'a/4': 'A', 'b/4': 'B',
+                'c/5': 'c', 'd/5': 'd', 'e/5': 'e', 'f/5': 'f', 'g/5': 'g',
+                'f#/4': '^F', 'bb/4': '_B', 'f#/5': '^f'
+            };
+            const DURATION_MAP = { 'q': '1', 'h': '2', '8': '/2', '16': '/4' };
+
+            function setButtonsState(playing) {
+                isPlaying = playing;
+                generateBtn.disabled = playing;
+                playBtn.disabled = playing || currentExercise.length === 0;
+                shareBtn.disabled = playing || currentExercise.length === 0;
+                metronomeBtn.disabled = playing;
+                bpmSlider.disabled = playing;
+                tonalitySelect.disabled = playing;
+                difficultyButtonsContainer.querySelectorAll('button').forEach(b => b.disabled = playing);
+            }
+
+            function updateFluteDiagram(noteKey) {
+                const fingering = noteKey ? FINGERINGS[noteKey] : null;
+                for (let i = 0; i <= 7; i++) {
+                    const holeElements = document.querySelectorAll(`[data-hole-id='${i}']`);
+                    const shouldBeClosed = fingering ? fingering[i] : false;
+                    holeElements.forEach(el => el.classList.toggle('closed', shouldBeClosed));
+                }
+            }
+
+            function generateExercise() {
+                stopPlayback();
+                
+                const activeDifficultyBtn = difficultyButtonsContainer.querySelector('.active');
+                const difficulty = activeDifficultyBtn.dataset.difficulty;
+                const tonality = tonalitySelect.value;
+
+                const { notes: numNotes, durations, notePoolSize } = DIFFICULTY_LEVELS[difficulty];
+                const scale = SCALES[tonality];
+                const poolSize = Math.min(notePoolSize, scale.length);
+                const notePool = scale.slice(0, poolSize);
+
+                currentExercise = [];
+                for (let i = 0; i < numNotes; i++) {
+                    const noteKey = notePool[Math.floor(Math.random() * notePool.length)];
+                    const duration = durations[Math.floor(Math.random() * durations.length)];
+                    currentExercise.push({ key: noteKey, duration });
+                }
+                
+                renderScoreAndNames();
+                updateFluteDiagram(null);
+                setButtonsState(false);
+            }
+
+            function renderScoreAndNames() {
+                scoreOutputEl.innerHTML = '<div id="score-div"></div>';
+                noteNamesPanel.innerHTML = '';
+                if (currentExercise.length === 0) return;
+
+                let abcString = `X:1\nM:4/4\nL:1/4\nK:${tonalitySelect.value}\n|`;
+                currentExercise.forEach(note => {
+                    const abcNote = ABC_MAP[note.key] || '';
+                    const abcDuration = DURATION_MAP[note.duration] || '1';
+                    abcString += `${abcNote}${abcDuration} `;
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'note-name-span';
+                    nameSpan.textContent = NOTE_NAMES[note.key] || note.key;
+                    noteNamesPanel.appendChild(nameSpan);
+                });
+
+                ABCJS.renderAbc("score-div", abcString, { 
+                    responsive: "resize",
+                    staffwidth: 440,
+                    paddingleft: 0,
+                    paddingright: 0,
+                });
+            }
+
+            async function playExercise() {
+                if (isPlaying || currentExercise.length === 0) return;
+                
+                if (!audioContext || audioContext.state === 'closed') {
+                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioContext.state === 'suspended') await audioContext.resume();
+
+                setButtonsState(true);
+                
+                const bpm = parseInt(bpmSlider.value, 10);
+                const quarterNoteDuration = 60 / bpm;
+                let cumulativeTime = 0;
+
+                const noteNameSpans = noteNamesPanel.querySelectorAll('.note-name-span');
+
+                if (metronomeBtn.classList.contains('active')) {
+                    const metronomeInterval = setInterval(() => {
+                        const tickTime = audioContext.currentTime;
+                        const osc = audioContext.createOscillator();
+                        const gain = audioContext.createGain();
+                        osc.frequency.setValueAtTime(1000, tickTime);
+                        gain.gain.setValueAtTime(0.5, tickTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, tickTime + 0.05);
+                        osc.connect(gain);
+                        gain.connect(audioContext.destination);
+                        osc.start(tickTime);
+                        osc.stop(tickTime + 0.05);
+                    }, quarterNoteDuration * 1000);
+                    timeoutIds.push(metronomeInterval);
+                }
+
+                currentExercise.forEach((note, index) => {
+                    const freq = NOTES_INFO[note.key];
+                    let durationInSeconds;
+                    switch(note.duration) {
+                        case 'h': durationInSeconds = quarterNoteDuration * 2; break;
+                        case 'q': durationInSeconds = quarterNoteDuration; break;
+                        case '8': durationInSeconds = quarterNoteDuration / 2; break;
+                        case '16': durationInSeconds = quarterNoteDuration / 4; break;
+                        default: durationInSeconds = quarterNoteDuration;
+                    }
+                    
+                    const noteStartTime = audioContext.currentTime + cumulativeTime;
+                    if (freq) {
+                        const gainNode = audioContext.createGain();
+                        gainNode.connect(audioContext.destination);
+                        const oscillator = audioContext.createOscillator();
+                        oscillator.type = 'triangle';
+                        oscillator.frequency.setValueAtTime(freq, noteStartTime);
+                        oscillator.connect(gainNode);
+                        const oscillator2 = audioContext.createOscillator();
+                        oscillator2.type = 'sine';
+                        oscillator2.frequency.setValueAtTime(freq * 1.005, noteStartTime);
+                        oscillator2.connect(gainNode);
+
+                        const attackTime = 0.02;
+                        const peakVolume = 0.25;
+                        gainNode.gain.setValueAtTime(0, noteStartTime);
+                        gainNode.gain.linearRampToValueAtTime(peakVolume, noteStartTime + attackTime);
+                        gainNode.gain.linearRampToValueAtTime(peakVolume * 0.8, noteStartTime + durationInSeconds * 0.5);
+                        const noteEndTime = noteStartTime + durationInSeconds * 0.95;
+                        gainNode.gain.setValueAtTime(peakVolume * 0.8, noteEndTime - 0.05);
+                        gainNode.gain.linearRampToValueAtTime(0, noteEndTime);
+
+                        oscillator.start(noteStartTime);
+                        oscillator2.start(noteStartTime);
+                        oscillator.stop(noteEndTime);
+                        oscillator2.stop(noteEndTime);
+                    }
+
+                    timeoutIds.push(setTimeout(() => {
+                        updateFluteDiagram(note.key);
+                        
+                        noteNameSpans.forEach(span => span.classList.remove('highlighted'));
+                        if (noteNameSpans[index]) {
+                            noteNameSpans[index].classList.add('highlighted');
+                        }
+                    }, cumulativeTime * 1000));
+
+                    cumulativeTime += durationInSeconds;
+                });
+
+                timeoutIds.push(setTimeout(stopPlayback, cumulativeTime * 1000));
+            }
+
+            function stopPlayback() {
+                timeoutIds.forEach(id => {
+                    clearTimeout(id);
+                    clearInterval(id);
+                });
+                timeoutIds = [];
+
+                if (audioContext && audioContext.state === 'running') {
+                    audioContext.close().catch(console.error);
+                }
+                updateFluteDiagram(null);
+                
+                noteNamesPanel.querySelectorAll('.note-name-span').forEach(span => span.classList.remove('highlighted'));
+                
+                setButtonsState(false);
+            }
+
+            function showToast(message) {
+                const toast = document.createElement('div');
+                toast.textContent = message;
+                toast.className = 'fixed bottom-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg z-50';
+                document.body.appendChild(toast);
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            }
+
+            function copyToClipboard(text) {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-9999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('Exercício copiado para a área de transferência!');
+                } catch (err) {
+                    console.error('Não foi possível copiar o texto:', err);
+                }
+                document.body.removeChild(textArea);
+            }
+
+            function shareExercise() {
+                if (currentExercise.length === 0) return;
+
+                const exerciseText = currentExercise.map(note => NOTE_NAMES[note.key] || note.key).join(' - ');
+                const shareData = {
+                    title: 'Exercício de Flauta Doce',
+                    text: `Pratique este exercício que eu gerei: ${exerciseText}`,
+                };
+
+                if (navigator.share) {
+                    navigator.share(shareData).catch(err => console.error("Erro ao compartilhar", err));
+                } else {
+                    copyToClipboard(shareData.text);
+                }
+            }
+
+            generateBtn.addEventListener('click', generateExercise);
+            playBtn.addEventListener('click', playExercise);
+            shareBtn.addEventListener('click', shareExercise);
+            metronomeBtn.addEventListener('click', () => {
+                metronomeBtn.classList.toggle('active');
+            });
+            bpmSlider.addEventListener('input', (e) => {
+                bpmValueEl.textContent = `${e.target.value} BPM`;
+            });
+            
+            difficultyButtonsContainer.addEventListener('click', (e) => {
+                if(isPlaying || !e.target.matches('.difficulty-button')) return;
+                difficultyButtonsContainer.querySelector('.active').classList.remove('active');
+                e.target.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
+
