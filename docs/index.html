@@ -12,6 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.0/dist/abcjs-basic-min.js"></script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🪈</text></svg>">
     <style>
+        /* Define variáveis de cores para fácil manutenção do tema */
         :root {
             --bg-color: #121826;
             --surface-color: #1A202C;
@@ -24,6 +25,16 @@
             --text-color: #E5E7EB;
             --text-muted-color: #9CA3AF;
         }
+
+        /* Garante que o modelo de caixa (box-sizing) seja border-box globalmente para layouts mais previsíveis */
+        html {
+            box-sizing: border-box;
+        }
+        *, *::before, *::after {
+            box-sizing: inherit;
+        }
+
+        /* Estilos do corpo da página para centralizar o conteúdo e definir o fundo */
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
@@ -32,30 +43,48 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            min-height: 100vh; /* Ocupa a altura total da viewport */
             margin: 0;
-            padding: 1rem;
+            padding: 1rem; /* Preenchimento em torno do conteúdo principal */
             box-sizing: border-box;
         }
+
+        /* Contêiner principal da aplicação */
         .main-container {
-            width: 100%;
-            max-width: 900px;
+            width: 100%; /* Ocupa 100% da largura disponível */
+            max-width: 900px; /* Limita a largura máxima em telas maiores */
             display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 2rem;
+            grid-template-columns: 2fr 1fr; /* Layout de duas colunas para desktop */
+            gap: 2rem; /* Espaçamento entre as colunas */
             background-color: var(--surface-color);
             border-radius: 1.5rem;
-            padding: 2rem;
+            padding: 2rem; /* Preenchimento padrão para desktop */
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 0 auto; /* Centraliza horizontalmente o contêiner */
+            box-sizing: border-box; /* Garante que o padding não adicione largura extra */
         }
+
+        /* Media query para telas menores (smartphones e tablets em modo retrato) */
         @media (max-width: 800px) {
             .main-container {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr; /* Muda para uma única coluna */
+                padding: 1rem; /* Reduz o preenchimento para telas menores */
             }
         }
+
+        /* Media query para telas ainda menores (smartphones pequenos) */
+        @media (max-width: 480px) {
+            .main-container {
+                padding: 0.75rem; /* Reduz ainda mais o preenchimento */
+            }
+        }
+
+        /* Estilos das colunas */
         .left-column { display: flex; flex-direction: column; }
         .right-column { display: flex; flex-direction: column; justify-content: center; }
+
+        /* Painel de configurações */
         .settings-panel {
             background-color: var(--panel-color);
             border-radius: 1rem;
@@ -65,6 +94,8 @@
         }
         .settings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
         .setting-group label { display: block; font-weight: 600; margin-bottom: 0.75rem; color: var(--text-muted-color); }
+
+        /* Botões de dificuldade */
         .difficulty-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
         .difficulty-button {
             background-color: #374151;
@@ -84,6 +115,8 @@
             font-weight: 700;
         }
         .difficulty-button:disabled, .custom-select:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.5); }
+
+        /* Estilo para o select customizado */
         .custom-select {
             width: 100%;
             background-color: #374151;
@@ -91,13 +124,15 @@
             border-radius: 0.5rem;
             padding: 0.5rem 0.75rem;
             color: var(--text-color);
-            -webkit-appearance: none;
-            appearance: none;
-              background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239CA3AF' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-              background-position: right 0.5rem center;
-              background-repeat: no-repeat;
-              background-size: 1.5em 1.5em;
+            -webkit-appearance: none; /* Remove a seta padrão do select no Webkit */
+            appearance: none; /* Remove a seta padrão do select */
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239CA3AF' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); /* Adiciona uma seta SVG customizada */
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
         }
+
+        /* Painel da partitura */
         .score-panel {
             background-color: #FFFFFF;
             color: #000000;
@@ -108,11 +143,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow-x: auto;
+            overflow-x: auto; /* Permite rolagem horizontal se a partitura for muito longa */
         }
+
+        /* Painel dos nomes das notas */
         .note-names-panel {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: wrap; /* Permite que as notas quebrem linha */
             gap: 0.75rem;
             justify-content: center;
             align-items: center;
@@ -142,6 +179,8 @@
             font-weight: normal;
             font-size: 1rem;
         }
+
+        /* Painel do diagrama da flauta */
         .flute-diagram-panel {
             background-color: var(--panel-color);
             border-radius: 1rem;
@@ -162,6 +201,8 @@
             fill: var(--accent-color);
         }
         .flute-body { fill: none; stroke: var(--text-color); stroke-width: 1.5; }
+
+        /* Controles de reprodução */
         .playback-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
         .control-button {
             background-color: #374151;
@@ -180,6 +221,8 @@
         }
         .control-button:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
         .control-button i { font-size: 1.25rem; }
+
+        /* Estilos específicos para botões de controle */
         #generate-btn { grid-column: 1 / -1; background-color: var(--primary-color); color: var(--panel-color); }
         #play-btn { background-color: var(--accent-color); }
         #share-btn { background-color: var(--share-color); }
@@ -546,7 +589,7 @@
                 textArea.select();
                 try {
                     document.execCommand('copy');
-                    showToast('Exercício copiado para a área de transferência!');
+                    showToast('Conteúdo copiado para a área de transferência!');
                 } catch (err) {
                     console.error('Não foi possível copiar o texto:', err);
                 }
@@ -556,13 +599,18 @@
             function shareExercise() {
                 if (currentExercise.length === 0) return;
                 const exerciseText = currentExercise.map(note => NOTE_NAMES[note.key] || note.key).join(' - ');
+                const toolLink = 'https://flautafacil.vercel.app/'; // Link da ferramenta
+                
                 const shareData = {
                     title: 'Exercício de Flauta Doce',
-                    text: `Pratique este exercício que eu gerei: ${exerciseText}`,
+                    text: `Pratique este exercício que eu gerei: ${exerciseText}\n\nExperimente a ferramenta aqui: ${toolLink}`,
+                    url: toolLink // Adiciona a URL para compartilhamento nativo
                 };
+
                 if (navigator.share) {
                     navigator.share(shareData).catch(err => console.error("Erro ao compartilhar", err));
                 } else {
+                    // Fallback para copiar para a área de transferência
                     copyToClipboard(shareData.text);
                 }
             }
