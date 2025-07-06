@@ -65,18 +65,47 @@
             box-sizing: border-box; /* Garante que o padding não adicione largura extra */
         }
 
-        /* Media query para telas menores (smartphones e tablets em modo retrato) */
+        /* Media query para tablets e telas menores - Layout de 1 coluna */
         @media (max-width: 800px) {
+            body {
+                /* Remove o alinhamento central para permitir rolagem natural em telas menores */
+                display: block;
+                padding: 0.5rem;
+            }
             .main-container {
                 grid-template-columns: 1fr; /* Muda para uma única coluna */
-                padding: 1rem; /* Reduz o preenchimento para telas menores */
+                padding: 1rem;
+                gap: 1.5rem;
+            }
+            .right-column {
+                order: -1; /* Move o diagrama da flauta para o topo em telas menores */
+            }
+            .flute-diagram-panel {
+                height: auto; /* Altura automática para se ajustar ao conteúdo */
+                min-height: 300px; /* Garante uma altura mínima para visualização */
+                padding: 1.5rem;
             }
         }
 
-        /* Media query para telas ainda menores (smartphones pequenos) */
-        @media (max-width: 480px) {
+        /* Media query para smartphones - Ajustes finos */
+        @media (max-width: 500px) {
+            h1 {
+                font-size: 1.3rem; /* Reduz o tamanho do título */
+            }
+            .settings-grid, .playback-controls {
+                grid-template-columns: 1fr; /* Empilha os controles em uma única coluna */
+            }
+            .settings-grid {
+                gap: 1.25rem;
+            }
+            .playback-controls {
+                gap: 0.75rem;
+            }
             .main-container {
-                padding: 0.75rem; /* Reduz ainda mais o preenchimento */
+                padding: 0.75rem;
+            }
+            .settings-panel, .score-panel, .note-names-panel {
+                padding: 1rem;
             }
         }
 
@@ -143,7 +172,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow-x: auto; /* Permite rolagem horizontal se a partitura for muito longa */
+            overflow: hidden; /* Evita rolagem, pois o ABCJS cuidará do redimensionamento */
         }
 
         /* Painel dos nomes das notas */
@@ -190,7 +219,13 @@
             justify-content: center;
             align-items: center;
         }
-        .flute-svg { stroke-linecap: round; stroke-linejoin: round; max-height: 100%; }
+        .flute-svg {
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            max-height: 100%; /* Respeita a altura do contêiner */
+            width: auto;      /* Mantém a proporção */
+            max-width: 150px; /* Evita que fique muito grande */
+        }
         .flute-hole { 
             fill: var(--surface-color); 
             stroke: var(--text-muted-color); 
@@ -223,7 +258,7 @@
         .control-button i { font-size: 1.25rem; }
 
         /* Estilos específicos para botões de controle */
-        #generate-btn { grid-column: 1 / -1; background-color: var(--primary-color); color: var(--panel-color); }
+        #generate-btn { background-color: var(--primary-color); color: var(--panel-color); }
         #play-btn { background-color: var(--accent-color); }
         #share-btn { background-color: var(--share-color); }
         #metronome-btn { background-color: #4B5563; }
@@ -301,7 +336,8 @@
 
         <div class="right-column">
             <div id="flute-diagram-container" class="flute-diagram-panel">
-                 <svg width="150" height="500" viewBox="0 0 100 350" class="flute-svg">
+                 <!-- Atributos de width e height removidos para permitir o controle via CSS -->
+                 <svg viewBox="0 0 100 350" class="flute-svg">
                     <g transform="translate(20, 0)">
                         <path d="M 20 25 L 20 335 C 20 345, 50 345, 50 335 L 50 25 C 50 15, 20 15, 20 25" class="flute-body" />
                         <circle data-hole-id="1" class="flute-hole" cx="35" cy="60" r="8"/>
@@ -314,7 +350,7 @@
                         <circle data-hole-id="7" class="flute-hole" cx="32" cy="270" r="5"/>
                         <circle data-hole-id="7" class="flute-hole" cx="42" cy="273" r="5"/>
                     </g>
-                    <!-- Furo do polegar (data-hole-id="0") ajustado para alinhar com o primeiro furo frontal -->
+                    <!-- Furo traseiro (data-hole-id="0") alinhado com o primeiro furo frontal (cy="60") -->
                     <circle data-hole-id="0" class="flute-hole" cx="85" cy="60" r="8"/>
                 </svg>
             </div>
@@ -403,27 +439,29 @@
                      return;
                 }
                 
-                // String para a partitura, sem nomes de notas para evitar problemas.
                 let abcString = `X:1\nM:4/4\nL:1/4\nK:${tonalitySelect.value}\n|`;
                 
                 currentExercise.forEach(note => {
-                    // 1. Adiciona a nota à string da partitura
                     const abcNote = ABC_MAP[note.key] || '';
                     const abcDuration = DURATION_MAP[note.duration] || '1';
                     abcString += `${abcNote}${abcDuration} `;
 
-                    // 2. Cria o span com o nome da nota para o painel separado
                     const nameSpan = document.createElement('span');
                     nameSpan.className = 'note-name-span';
                     nameSpan.textContent = NOTE_NAMES[note.key] || note.key;
                     noteNamesPanel.appendChild(nameSpan);
                 });
                 
+                // --- MUDANÇA PARA RESPONSIVIDADE ---
+                // Calcula a largura da pauta com base no contêiner, com um fallback.
+                // Subtrai o padding do contêiner para um ajuste preciso.
+                const staffWidth = scoreOutputEl.clientWidth > 50 ? scoreOutputEl.clientWidth - 32 : 400;
+
                 ABCJS.renderAbc(scoreOutputEl, abcString, { 
-                    responsive: "resize", 
-                    staffwidth: 440,
-                    paddingleft: 15,
-                    paddingright: 15
+                    responsive: "resize", // Permite que a partitura se redimensione com a janela
+                    staffwidth: staffWidth, // Define a largura inicial calculada
+                    paddingleft: 0, // Deixa o contêiner pai controlar o padding
+                    paddingright: 0
                 });
             }
             
@@ -517,7 +555,6 @@
 
                     timeoutIds.push(setTimeout(() => {
                         updateFluteDiagram(note.key);
-                        // Lógica de highlight para o painel de nomes de notas
                         noteNameSpans.forEach(span => span.classList.remove('highlighted'));
                         if (noteNameSpans[index]) {
                             noteNameSpans[index].classList.add('highlighted');
@@ -600,18 +637,17 @@
             function shareExercise() {
                 if (currentExercise.length === 0) return;
                 const exerciseText = currentExercise.map(note => NOTE_NAMES[note.key] || note.key).join(' - ');
-                const toolLink = 'https://flautafacil.vercel.app/'; // Link da ferramenta
+                const toolLink = window.location.href;
                 
                 const shareData = {
                     title: 'Exercício de Flauta Doce',
                     text: `Pratique este exercício que eu gerei: ${exerciseText}\n\nExperimente a ferramenta aqui: ${toolLink}`,
-                    url: toolLink // Adiciona a URL para compartilhamento nativo
+                    url: toolLink
                 };
 
                 if (navigator.share) {
                     navigator.share(shareData).catch(err => console.error("Erro ao compartilhar", err));
                 } else {
-                    // Fallback para copiar para a área de transferência
                     copyToClipboard(shareData.text);
                 }
             }
@@ -634,6 +670,9 @@
                 difficultyButtonsContainer.querySelector('.active').classList.remove('active');
                 e.target.classList.add('active');
             });
+
+            // Gera um exercício inicial ao carregar a página
+            generateExercise();
         });
     </script>
 </body>
