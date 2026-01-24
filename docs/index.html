@@ -64,7 +64,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
-        // --- COMPONENTE DE ÍCONE CUSTOMIZADO (SUBSTITUI LUCIDE-REACT) ---
+        // --- COMPONENTE DE ÍCONE CUSTOMIZADO ---
         const Icon = ({ name, size = 24, className = "", fill = "none" }) => {
             const icons = {
                 Play: <polygon points="5 3 19 12 5 21 5 3" fill={fill === "currentColor" ? "currentColor" : fill} />,
@@ -80,7 +80,8 @@
                 Mic2: <><path d="m12 8-9.04 9.06a2.82 2.82 0 1 0 3.98 3.98L16 12"></path><circle cx="17" cy="7" r="5"></circle></>,
                 Star: <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />,
                 Trophy: <><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></>,
-                Info: <><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></>
+                Info: <><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></>,
+                ThumbsUp: <><path d="M7 10v12"></path><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"></path></>
             };
 
             return (
@@ -101,7 +102,6 @@
             );
         };
 
-        // --- CONSTANTES TÉCNICAS ---
         const FREQS = { 'do_lat': 261.63, 're_lat': 293.66, 'mi_lat': 329.63, 'fa_lat': 349.23, 'sol_lat': 392.00, 'la_lat': 440.00, 'si_lat': 493.88 };
         const LABELS = { 'do_lat': 'Dó', 're_lat': 'Ré', 'mi_lat': 'Mi', 'fa_lat': 'Fá', 'sol_lat': 'Sol', 'la_lat': 'Lá', 'si_lat': 'Si' };
         const FINGERINGS = {
@@ -114,7 +114,6 @@
             'si_lat': [true, true, false, false, false, false, false, false]
         };
 
-        // --- COMPONENTE MODAL PROFISSIONAL ---
         const Modal = ({ isOpen, onClose, title, iconName, children }) => {
             if (!isOpen) return null;
             return (
@@ -137,7 +136,6 @@
             );
         };
 
-        // --- APLICATIVO ---
         const App = () => {
             const [view, setView] = useState('menu'); 
             const [levelIdx, setLevelIdx] = useState(0);
@@ -146,13 +144,13 @@
             const [activeNoteIdx, setActiveNoteIdx] = useState(-1);
             const [audioReady, setAudioReady] = useState(false);
             
-            // Estados de Interface
+            // Novos Estados para Fluxo Pedagógico
+            const [hasListened, setHasListened] = useState(false);
             const [showGuide, setShowGuide] = useState(false);
             const [lessonComplete, setLessonComplete] = useState(false);
 
             const audioCtx = useRef(null);
 
-            // Currículo Técnico Expandido
             const curriculum = useMemo(() => {
                 const baseLevels = [
                     { id: 1, name: "Nível Dó", notes: ["do_lat"], dur: ["q", "h"], goal: "Embocadura firme e sopro contínuo no Dó grave." },
@@ -193,6 +191,12 @@
             const currentLevel = curriculum[levelIdx];
             const currentExercise = currentLevel.exercises[exerciseIdx];
 
+            // Resetar estado ao mudar de exercício
+            useEffect(() => {
+                setHasListened(false);
+                setActiveNoteIdx(-1);
+            }, [exerciseIdx, levelIdx]);
+
             const initAudio = () => {
                 if (!audioCtx.current) {
                     audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -207,7 +211,6 @@
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(FREQS[note], startTime);
                 
-                // Envelope de Ganho Pedagógico
                 gain.gain.setValueAtTime(0, startTime);
                 gain.gain.linearRampToValueAtTime(0.15, startTime + 0.04);
                 gain.gain.setValueAtTime(0.15, startTime + duration - 0.05);
@@ -238,7 +241,7 @@
                 setTimeout(() => {
                     setIsPlaying(false);
                     setActiveNoteIdx(-1);
-                    setLessonComplete(true);
+                    setHasListened(true); // Agora o aluno ouviu a referência
                 }, (scheduleTime - audioCtx.current.currentTime) * 1000);
             };
 
@@ -254,15 +257,13 @@
                 }
             };
 
-            // --- RENDERIZAÇÃO DE TELAS ---
-
             if (view === 'menu') {
                 return (
                     <div className="scroll-container p-6 md:p-16 no-select">
                         <div className="max-w-6xl mx-auto">
                             <div className="flex flex-col md:flex-row justify-between items-center mb-16 gap-8 text-center md:text-left">
                                 <div>
-                                    <h1 className="text-6xl font-black text-emerald-500 mb-2 tracking-tighter">MESTRE DA FLAUTA</h1>
+                                    <h1 className="text-6xl font-black text-emerald-500 mb-2 tracking-tighter uppercase">Mestre da Flauta</h1>
                                     <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-xs">
                                         Educação Musical Progressiva Profissional
                                     </p>
@@ -301,7 +302,6 @@
                             </div>
                         </div>
 
-                        {/* Modal do Guia Técnico */}
                         <Modal isOpen={showGuide} onClose={() => setShowGuide(false)} title="Manual do Aluno" iconName="Info">
                             <div className="space-y-10">
                                 <section className="flex gap-4">
@@ -343,19 +343,17 @@
                 );
             }
 
-            // --- PLAYER ---
             return (
                 <div className="h-full flex flex-col p-4 md:p-12 no-select bg-slate-950 overflow-hidden">
                     <div className="max-w-6xl mx-auto w-full flex flex-col h-full">
                         
-                        {/* Barra de Progresso Superior */}
                         <div className="flex items-center gap-8 py-4 mb-8">
                             <button onClick={() => setView('menu')} className="p-4 bg-slate-900 rounded-[1.5rem] text-slate-500 hover:text-white transition-all shadow-xl border border-slate-800">
                                 <Icon name="ArrowLeft" size={24} />
                             </button>
                             <div className="flex-1">
                                 <div className="flex justify-between items-end mb-2 px-1">
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Desempenho no Nível</span>
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Progresso no Nível</span>
                                     <span className="text-xs font-bold text-emerald-500">{exerciseIdx + 1} / {currentLevel.exercises.length}</span>
                                 </div>
                                 <div className="h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800 p-[2px]">
@@ -367,10 +365,8 @@
                             </div>
                         </div>
 
-                        {/* Corpo Central Adaptativo */}
                         <div className="flex-1 flex flex-col lg:flex-row gap-12 min-h-0 items-center justify-center">
                             
-                            {/* Notação e Instrução */}
                             <div className="flex-1 w-full flex flex-col justify-center gap-12">
                                 <div className="text-center lg:text-left">
                                     <div className="inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/20">
@@ -379,9 +375,11 @@
                                     <h2 className="text-4xl md:text-6xl font-black text-white leading-none tracking-tight">
                                         {currentExercise.objective}
                                     </h2>
+                                    <p className="mt-4 text-slate-400 text-sm md:text-base italic">
+                                        {hasListened ? "Ouça novamente ou confirme que está pronto para avançar." : "Primeiro, ouça a referência para memorizar o som e o ritmo."}
+                                    </p>
                                 </div>
 
-                                {/* Timeline de Blocos */}
                                 <div className="w-full flex items-center gap-2 overflow-x-auto no-scrollbar py-10 px-4 bg-slate-900/20 rounded-[3rem]">
                                     {currentExercise.sequence.map((step, i) => (
                                         <div 
@@ -401,24 +399,32 @@
                                     ))}
                                 </div>
 
-                                {/* Botão Player Desktop */}
-                                <div className="hidden lg:block">
+                                {/* Ações Desktop */}
+                                <div className="hidden lg:flex flex-col gap-4 max-w-sm">
                                     {!isPlaying ? (
                                         <button 
                                             onClick={startExercise}
-                                            className="w-full max-w-sm bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black py-7 rounded-[2.5rem] text-2xl shadow-[0_8px_0_#059669] hover:shadow-[0_6px_0_#059669] active:translate-y-1 transition-all flex items-center justify-center gap-4"
+                                            className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-6 rounded-[2rem] text-xl transition-all flex items-center justify-center gap-4 border border-slate-700"
                                         >
-                                            <Icon name="Play" size={32} fill="currentColor" /> INICIAR LIÇÃO
+                                            <Icon name="Volume2" size={28} /> {hasListened ? "OUVIR NOVAMENTE" : "OUVIR REFERÊNCIA"}
                                         </button>
                                     ) : (
-                                        <div className="w-full max-w-sm py-7 text-center font-black text-emerald-500 bg-emerald-500/5 rounded-[2.5rem] border-2 border-emerald-500/20 animate-pulse text-xl tracking-[0.2em]">
+                                        <div className="w-full py-6 text-center font-black text-emerald-500 bg-emerald-500/5 rounded-[2rem] border-2 border-emerald-500/20 animate-pulse text-xl tracking-[0.2em]">
                                             ESCUTE...
                                         </div>
+                                    )}
+                                    
+                                    {hasListened && !isPlaying && (
+                                        <button 
+                                            onClick={() => setLessonComplete(true)}
+                                            className="w-full bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black py-7 rounded-[2rem] text-2xl shadow-[0_8px_0_#059669] hover:shadow-[0_6px_0_#059669] active:translate-y-1 transition-all flex items-center justify-center gap-4"
+                                        >
+                                            <Icon name="ThumbsUp" size={32} fill="currentColor" /> ESTOU PRONTO
+                                        </button>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Diagrama da Flauta */}
                             <div className="w-full lg:w-auto flex justify-center py-4">
                                 <div className="bg-slate-900/80 p-14 lg:p-20 rounded-[6rem] border border-slate-800 shadow-2xl relative">
                                     <div className="absolute top-10 left-1/2 -translate-x-1/2 text-[10px] font-black text-slate-700 tracking-[0.8em] uppercase">
@@ -426,12 +432,10 @@
                                     </div>
                                     <svg viewBox="0 0 100 240" className="w-[120px] lg:w-[160px] h-auto">
                                         <rect x="35" y="0" width="30" height="240" rx="15" fill="#1E293B" />
-                                        {/* Polegar */}
                                         <circle 
                                             className={`flute-hole ${activeNoteIdx >= 0 && currentExercise.sequence[activeNoteIdx].n && FINGERINGS[currentExercise.sequence[activeNoteIdx].n][0] ? 'closed' : ''}`}
                                             cx="85" cy="40" r="10" 
                                         />
-                                        {/* Frontais */}
                                         {[1,2,3,4,5,6,7].map(h => (
                                             <circle 
                                                 key={h}
@@ -444,24 +448,32 @@
                             </div>
                         </div>
 
-                        {/* Player Mobile */}
-                        <div className="lg:hidden mt-auto py-10">
+                        {/* Ações Mobile */}
+                        <div className="lg:hidden mt-auto py-10 flex flex-col gap-4">
                             {!isPlaying ? (
                                 <button 
                                     onClick={startExercise}
-                                    className="w-full bg-emerald-500 text-emerald-950 font-black py-6 rounded-[2rem] text-2xl shadow-[0_6px_0_#059669] active:translate-y-1 transition-all flex items-center justify-center gap-3"
+                                    className="w-full bg-slate-800 text-white font-black py-5 rounded-[2rem] text-lg transition-all flex items-center justify-center gap-3 border border-slate-700"
                                 >
-                                    <Icon name="Play" size={28} fill="currentColor" /> TOCAR
+                                    <Icon name="Volume2" size={24} /> {hasListened ? "OUVIR NOVAMENTE" : "OUVIR REFERÊNCIA"}
                                 </button>
                             ) : (
-                                <div className="w-full py-6 text-center font-black text-emerald-400 bg-emerald-500/5 rounded-[2rem] border-2 border-emerald-500/10 animate-pulse text-sm uppercase tracking-widest">
+                                <div className="w-full py-5 text-center font-black text-emerald-400 bg-emerald-500/5 rounded-[2rem] border-2 border-emerald-500/10 animate-pulse text-sm uppercase tracking-widest">
                                     Concentração Total
                                 </div>
+                            )}
+
+                            {hasListened && !isPlaying && (
+                                <button 
+                                    onClick={() => setLessonComplete(true)}
+                                    className="w-full bg-emerald-500 text-emerald-950 font-black py-6 rounded-[2rem] text-xl shadow-[0_6px_0_#059669] active:translate-y-1 transition-all flex items-center justify-center gap-3"
+                                >
+                                    <Icon name="ThumbsUp" size={28} fill="currentColor" /> ESTOU PRONTO
+                                </button>
                             )}
                         </div>
                     </div>
 
-                    {/* Modal de Conclusão Pedagógica */}
                     <Modal isOpen={lessonComplete} onClose={() => setLessonComplete(false)} title="Objetivo Concluído" iconName="Trophy">
                         <div className="text-center py-6">
                             <div className="inline-block p-6 bg-emerald-500/10 text-emerald-400 rounded-full mb-8">
@@ -469,7 +481,7 @@
                             </div>
                             <h4 className="text-3xl font-black text-white mb-3">Lição Finalizada</h4>
                             <p className="text-slate-500 mb-12 leading-relaxed px-6 text-sm">
-                                Sua precisão rítmica no {currentLevel.name} está melhorando. Deseja reforçar esta técnica ou avançar para o próximo desafio?
+                                Excelente! Se você já conseguiu reproduzir o exercício com clareza, pode avançar para o próximo desafio técnico.
                             </p>
                             <div className="flex flex-col gap-4">
                                 <button 
@@ -482,7 +494,7 @@
                                     onClick={() => { setLessonComplete(false); startExercise(); }}
                                     className="w-full bg-slate-800 text-white font-bold py-5 rounded-[1.5rem] hover:bg-slate-700 transition-all flex items-center justify-center gap-3"
                                 >
-                                    <Icon name="RotateCcw" size={20} /> REPETIR LIÇÃO
+                                    <Icon name="RotateCcw" size={20} /> REPETIR REFERÊNCIA
                                 </button>
                             </div>
                         </div>
