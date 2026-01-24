@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mestre da Flauta - Mobile Pro</title>
+    <title>Mestre da Flauta - Mobile Scroll Fix</title>
     
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -19,13 +19,21 @@
             background-color: #0F172A; 
             color: #F8FAFC; 
             margin: 0; 
-            overflow: hidden; 
             height: var(--app-height);
+            width: 100vw;
+            overflow: hidden; /* Impede o scroll na página inteira para evitar "elástico" no iOS */
             touch-action: manipulation;
         }
         #root { height: 100%; }
         
-        /* Ajuste de Cards para Mobile */
+        /* Área rolável principal */
+        .main-scroll-area {
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 2rem;
+        }
+
         .note-block { 
             position: relative;
             transition: all 0.3s ease; 
@@ -34,7 +42,6 @@
             overflow: hidden;
             background: rgba(30, 41, 59, 0.5);
             border-color: rgba(71, 85, 105, 0.2);
-            min-height: 80px;
         }
         
         .progress-bar-inner {
@@ -53,7 +60,6 @@
             border-color: #10B981; 
             box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); 
             transform: scale(1.05);
-            z-index: 10;
         }
 
         .flute-hole { fill: #334155; stroke: #475569; stroke-width: 1.5; }
@@ -72,8 +78,7 @@
         const Icon = ({ name, size = 24, className = "" }) => {
             const icons = {
                 ArrowLeft: <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" fill="none" />,
-                Volume2: <path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 010 7.07" stroke="currentColor" strokeWidth="2" fill="none" />,
-                Music: <path d="M9 18V5l12-2v13M6 18a3 3 0 100-6 3 3 0 000 6zm12-2a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="2" fill="none" />
+                Volume2: <path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 010 7.07" stroke="currentColor" strokeWidth="2" fill="none" />
             };
             return <svg width={size} height={size} viewBox="0 0 24 24" className={className}>{icons[name]}</svg>;
         };
@@ -140,13 +145,13 @@
             };
 
             if (view === 'menu') return (
-                <div className="p-6 h-full overflow-y-auto no-scrollbar">
-                    <h1 className="text-3xl font-black text-emerald-500 mb-6 tracking-tight">MESTRE DA FLAUTA</h1>
+                <div className="main-scroll-area p-6 no-scrollbar">
+                    <h1 className="text-3xl font-black text-emerald-500 mb-6 uppercase tracking-tighter">Mestre da Flauta</h1>
                     <div className="grid gap-3">
                         {curriculum.map((lvl, i) => (
-                            <button key={i} onClick={() => { setLevelIdx(i); setView('player'); }} className="bg-slate-900 p-5 rounded-2xl border border-slate-800 text-left active:scale-95 transition-transform">
+                            <button key={i} onClick={() => { setLevelIdx(i); setView('player'); }} className="bg-slate-900 p-5 rounded-2xl border border-slate-800 text-left active:bg-slate-800 transition-colors">
                                 <h3 className="text-lg font-bold text-white">{lvl.name}</h3>
-                                <p className="text-slate-500 text-xs font-semibold uppercase">Progresso: 0%</p>
+                                <p className="text-slate-500 text-xs font-semibold uppercase">Desafio Técnico</p>
                             </button>
                         ))}
                     </div>
@@ -154,35 +159,37 @@
             );
 
             return (
-                <div className="h-full flex flex-col p-4 bg-slate-950">
-                    <button onClick={() => setView('menu')} className="mb-4 text-slate-400 flex items-center gap-2 font-bold p-2">
-                        <Icon name="ArrowLeft" size={18} /> MENU
-                    </button>
+                <div className="main-scroll-area flex flex-col no-scrollbar">
+                    <div className="p-4 flex flex-col items-center min-h-full">
+                        <button onClick={() => setView('menu')} className="self-start mb-6 text-slate-400 flex items-center gap-2 font-bold p-2">
+                            <Icon name="ArrowLeft" size={18} /> MENU
+                        </button>
 
-                    <div className="flex-1 flex flex-col items-center justify-between py-2 overflow-hidden">
-                        <div className="text-center">
-                            <h2 className="text-xl font-black text-white">{currentExercise.name}</h2>
+                        <div className="text-center mb-8">
+                            <h2 className="text-2xl font-black text-white">{currentExercise.name}</h2>
+                            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Memorize a Sequência</p>
                         </div>
 
-                        {/* Sequência de Notas com Scroll Horizontal */}
-                        <div className="w-full flex gap-3 overflow-x-auto py-6 no-scrollbar px-4">
+                        {/* Sequência de Notas com Scroll Horizontal Independente */}
+                        <div className="w-full flex gap-3 overflow-x-auto py-8 no-scrollbar px-4 mb-4">
                             {currentExercise.sequence.map((step, i) => (
                                 <div 
                                     key={i}
                                     className={`note-block rounded-2xl flex flex-col items-center justify-center font-black ${activeNoteIdx === i ? 'active' : 'opacity-30'}`}
-                                    style={{ minWidth: `${step.d * 65}px`, height: '80px' }}
+                                    style={{ minWidth: `${step.d * 70}px`, height: '85px' }}
                                 >
                                     {activeNoteIdx === i && (
                                         <div key={`p-${i}`} className="progress-bar-inner animate-fill" style={{ animationDuration: `${step.d * BEAT_UNIT}s` }}></div>
                                     )}
-                                    <span className="relative z-10 text-lg text-white">{step.n ? LABELS[step.n].toUpperCase() : '—'}</span>
+                                    <span className="relative z-10 text-xl text-white">{step.n ? LABELS[step.n].toUpperCase() : '—'}</span>
+                                    <span className="relative z-10 text-[8px] opacity-40 uppercase tracking-tighter">{step.d === 2 ? 'Longo' : 'Curto'}</span>
                                 </div>
                             ))}
                         </div>
 
-                        {/* Flauta Visual Redimensionada para Mobile */}
-                        <div className="bg-slate-900 p-6 rounded-[3rem] border border-slate-800 shadow-xl my-4">
-                            <svg viewBox="0 0 100 240" className="h-[180px] w-auto">
+                        {/* Flauta Visual */}
+                        <div className="bg-slate-900/50 p-8 rounded-[4rem] border border-slate-800 shadow-xl mb-10">
+                            <svg viewBox="0 0 100 240" className="h-[200px] w-auto">
                                 <rect x="35" y="0" width="30" height="240" rx="15" fill="#1E293B" />
                                 <circle className={`flute-hole ${activeNoteIdx >= 0 && currentExercise.sequence[activeNoteIdx].n && FINGERINGS[currentExercise.sequence[activeNoteIdx].n][0] ? 'closed' : ''}`} cx="85" cy="40" r="10" />
                                 {[1,2,3,4,5,6,7].map(h => (
@@ -191,13 +198,15 @@
                             </svg>
                         </div>
 
-                        <button 
-                            onClick={playSequence}
-                            disabled={isPlaying}
-                            className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all active:scale-95 ${isPlaying ? 'bg-slate-800 text-slate-500' : 'bg-emerald-500 text-emerald-950'}`}
-                        >
-                            {isPlaying ? 'OUVINDO...' : 'OUVIR REFERÊNCIA'}
-                        </button>
+                        <div className="w-full max-w-xs mt-auto">
+                            <button 
+                                onClick={playSequence}
+                                disabled={isPlaying}
+                                className={`w-full py-6 rounded-[2rem] font-black text-lg transition-all active:scale-95 shadow-lg ${isPlaying ? 'bg-slate-800 text-slate-500' : 'bg-emerald-500 text-emerald-950 shadow-emerald-500/10'}`}
+                            >
+                                {isPlaying ? 'OUVINDO...' : 'OUVIR REFERÊNCIA'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             );
