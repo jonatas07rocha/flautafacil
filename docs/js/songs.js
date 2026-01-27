@@ -1,52 +1,53 @@
 // js/songs.js
-export const songLibrary = {
+// Removido o 'export' para que o navegador reconheça a variável globalmente
+const songLibrary = {
     nivelDo: [
-        { title: "Cai, Cai, Balão", abc: "X:1\nT:Cai, Cai, Balão\nM:2/4\nL:1/4\nK:C\nG G | E E | G G | E2 | F/F/ F/F/ | E E | D D | C2 |]" },
-        { title: "Brilha, Brilha Estrela", abc: "X:1\nT:Brilha, Brilha Estrela\nM:2/4\nL:1/4\nK:C\nC C G G | A A G2 | F F E E | D D C2 |" },
-        { title: "Dó, Ré, Mi Base", abc: "X:1\nT:Dó Ré Mi Base\nM:4/4\nL:1/4\nK:C\nC2 D2 | E2 C2 | E2 C2 | E4 |" },
-        { title: "O Sino de Belém", abc: "X:1\nT:O Sino de Belém\nM:2/4\nL:1/4\nK:C\nE E E2 | E E E2 | E G C D | E4 |" },
-        { title: "Pezinho", abc: "X:1\nT:Pezinho\nM:2/4\nL:1/4\nK:C\nC C D D | E E C2 | D D E E | C4 |" }
+        { title: "Mary Had a Little Lamb", abc: "X:1\nT:Mary Had a Little Lamb\nM:4/4\nL:1/4\nK:C\ne d c d | e e e2 | d d d2 | e g g2 | e d c d | e e e e | d d e d | c4 |" },
+        { title: "Au Clair de la Lune", abc: "X:1\nT:Au Clair de la Lune\nM:4/4\nL:1/4\nK:C\nc c c d | e2 d2 | c e d d | c4 | c c c d | e2 d2 | c e d d | c4 |" },
+        { title: "Twinkle Twinkle", abc: "X:1\nT:Twinkle Twinkle\nM:4/4\nL:1/4\nK:C\nc c g g | a a g2 | f f e e | d d c2 | g g f f | e e d2 | g g f f | e e d2 |" },
+        { title: "Ode to Joy", abc: "X:1\nT:Ode to Joy\nM:4/4\nL:1/4\nK:C\ne e f g | g f e d | c c d e | e>d d2 | e e f g | g f e d | c c d e | d>c c2 |" },
+        { title: "Jingle Bells", abc: "X:1\nT:Jingle Bells\nM:4/4\nL:1/4\nK:C\ne e e2 | e e e2 | e g c d | e4 | f f f f | f e e e | e d d e | d2 g2 |" }
     ],
     nivelRe: [
-        { title: "O Cravo e a Rosa", abc: "X:1\nT:O Cravo e a Rosa\nM:3/4\nL:1/4\nK:C\nG G E | G G E | F F D | C3 |" },
-        { title: "Remando Suavemente", abc: "X:1\nT:Remando Suavemente\nM:4/4\nL:1/4\nK:C\nE D C D | E E E2 | D D D2 | E G G2 |" },
-        { title: "Samba Lelê", abc: "X:1\nT:Samba Lelê\nM:2/4\nL:1/4\nK:C\nG G F F | E E D2 | F F E E | D D C2 |" },
-        { title: "Marcha Soldado", abc: "X:1\nT:Marcha Soldado\nM:2/4\nL:1/4\nK:C\nG G E G | c c A G | F F E G | D D C2 |" },
-        { title: "Ciranda Cirandinha", abc: "X:1\nT:Ciranda Cirandinha\nM:2/4\nL:1/4\nK:C\nE E D D | C C G2 | F F E E | D D C2 |" }
+        { title: "The Boys Of Bluehill", abc: "X:1\nT:Boys Of Bluehill\nM:4/4\nL:1/8\nK:Dmaj\n|:FA|BA FA D2 FA|BA Bd e2 de|fa gf eg fe|df ed B2 dB|BA FA D2 FA|BA Bd e2 de|fa gf eg fe|d2 f2 d2:|" },
+        { title: "The Cliffs Of Moher", abc: "X:1\nT:Cliffs Of Moher\nM:6/8\nL:1/8\nK:Ador\n|:a3 bag|eaf ged|c2A BAG|EFG ABd|eaa bag|eaf ged|c2A BAG|EFG A3:|" },
+        { title: "The Mason's Apron", abc: "X:1\nT:Mason's Apron\nM:4/4\nL:1/8\nK:Amaj\n|:e2|aAA2 ABAF|EFAc dcBA|dBB2 BcBA|Bcde fefg|aAA2 ABAF|EFAc dcBA|dcde fefa|A2 cB A2:|" },
+        { title: "Saint Anne's Reel", abc: "X:1\nT:Saint Anne's\nM:4/4\nL:1/8\nK:Dmaj\n|:fedf edcB|A2FA DAFA|B2GB EBGB|A2FA DAFA|fedf edcB|A2FA DAFA|BGed cABc|eddc d2 de:|" },
+        { title: "The Mountain Road", abc: "X:1\nT:Mountain Road\nM:4/4\nL:1/8\nK:Dmaj\nF2 AF BFAF|F2 AF EFDE|F2 AF BFAF|G2 FG EFDE|FAA2 BAFA|BABd eddA|d2dA BAFA|d2 de fgfe|d2 dA BAFA|G2 FG EDFA:|" }
     ],
     nivelMi: [
-        { title: "Mary Had a Little Lamb", abc: "X:1\nT:Mary Had a Little Lamb\nM:4/4\nL:1/4\nK:C\nE D C D | E E E2 | D D D2 | E G G2 |" },
-        { title: "Hino à Alegria", abc: "X:1\nT:Hino à Alegria\nM:4/4\nL:1/4\nK:C\nE E F G | G F E D | C C D E | E D D2 |" },
-        { title: "Frere Jacques", abc: "X:1\nT:Frere Jacques\nM:4/4\nL:1/4\nK:C\nC D E C | C D E C | E F G2 | E F G2 |" },
-        { title: "Old Macdonald", abc: "X:1\nT:Old Macdonald\nM:4/4\nL:1/4\nK:C\nG G G D | E E D2 | B B A A | G4 |" },
-        { title: "Atirei o Pau no Gato", abc: "X:1\nT:Atirei o Pau no Gato\nM:4/4\nL:1/4\nK:C\nG F E D | E F G2 | G G A G | F E D2 |" }
+        { title: "The Lark In The Morning", abc: "X:1\nT:Lark In The Morning\nM:6/8\nL:1/8\nK:Dmaj\n|:AFA AFA|BGB BdB|AFA AFA|fed BdB|AFA AFA|BGB BdB|def afe|dBB BdB:|" },
+        { title: "The Sally Gardens", abc: "X:1\nT:Sally Gardens\nM:4/4\nL:1/8\nK:Gmaj\n|:G2GA BAGB|dBeB dBAB|d2Bd efge|dBAB GEDE|GFGA BAGB|d2eB dBAB|d2Bd efge|dBAB G4:|" },
+        { title: "Sí Bheag Sí Mhór", abc: "X:1\nT:Si Bheag Si Mhor\nM:3/4\nL:1/8\nK:Dmaj\nde|:f3e d2|d2 de d2|B4 A2|F4 A2|BA Bc d2|e4 de|f2 f2 e2|d4 f2|B4 e2|A4 d2|F4 E2|D4 e2|B4 e2|A4 dc|d6|d4 de:|" },
+        { title: "The Gravel Walks", abc: "X:1\nT:Gravel Walks\nM:4/4\nL:1/8\nK:Ador\n|:A2 eA cA eA|A2 eA BAGB|A2 eA Bd ef|gedc BAGB:|A2 aA gAfA|A2 eA BAGB|ABcd efga|gedc BAGB:|" },
+        { title: "The Lilting Banshee", abc: "X:1\nT:Lilting Banshee\nM:6/8\nL:1/8\nK:Ador\n|:EAA EAA|BAB G2A|Bee edB|def gfg|eAA eAA|BAB G2A|Bee edB|dBA A3:|" }
     ],
     nivelFa: [
-        { title: "London Bridge", abc: "X:1\nT:London Bridge\nM:4/4\nL:1/4\nK:C\nG A G F | E F G2 | D E F2 | E F G2 |" },
-        { title: "A Canoa Virou", abc: "X:1\nT:A Canoa Virou\nM:2/4\nL:1/4\nK:C\nA A G G | F F E2 | G G F F | E D C2 |" },
-        { title: "Terezinha de Jesus", abc: "X:1\nT:Terezinha de Jesus\nM:3/4\nL:1/4\nK:C\nC E G | c2 A | G2 F | E3 |" },
-        { title: "Escravos de Jó", abc: "X:1\nT:Escravos de Jó\nM:2/4\nL:1/4\nK:C\nG E F G | G E F G | A G F E | D4 |" },
-        { title: "Boi da Cara Preta", abc: "X:1\nT:Boi da Cara Preta\nM:2/4\nL:1/4\nK:C\nE E D C | E E D2 | G G F E | D D C2 |" }
+        { title: "The Kid On The Mountain", abc: "X:1\nT:Kid On The Mountain\nM:9/8\nL:1/8\nK:Emin\n|:EFE FEF G2 F|E3 cBA BGE|EFE FED G2 A|BAG FAG FED:|BGB AFA G2 D|GAB dge dBA|BGB AFA G2 A|BAG FAG FED:|" },
+        { title: "The Harvest Home", abc: "X:1\nT:Harvest Home\nM:4/4\nL:1/8\nK:Dmaj\n|:AF|DAFA DAFA|defe dcBA|eAfA gAfA|e d B AGFE|DAFA DAFA|defe dcBA|eAfA gfec|d2 f2 d2:|" },
+        { title: "King Of The Fairies", abc: "X:1\nT:King Of The Fairies\nM:4/4\nL:1/8\nK:Edor\n|:B,2|EDEF GFGA|B2B2 G2GA|B2E2 EFGE|FGFE D2B,2|EDEF GFGA|BAGB d3c|B2E2 GFE_E|E6:|" },
+        { title: "The Rights Of Man", abc: "X:1\nT:Rights Of Man\nM:4/4\nL:1/8\nK:Emin\n|:GA|B2A2 G2F2|EFGA B2ef|gfed edBd|cBAG A2GA|BcAB GAFG|EFGA B2ef|gfed Bgfg|e2 E2 E2:|" },
+        { title: "The Swallowtail", abc: "X:1\nT:Swallowtail\nM:6/8\nL:1/8\nK:Ador\n|:cBA eAA|cBA edc|BGG dGG|gfe dcB|cBA eAA|cBA e2f|gfe dcB|cBA A2d:|" }
     ],
     nivelSol: [
-        { title: "Asa Branca (Intro)", abc: "X:1\nT:Asa Branca\nM:2/4\nL:1/4\nK:C\nC D E | G2 G | E F | G2 G |" },
-        { title: "Twinkle Twinkle (Var)", abc: "X:1\nT:Twinkle Var\nM:4/4\nL:1/4\nK:C\nG G A A | G F E D | C C G G | F E D C |" },
-        { title: "Capelinha de Melão", abc: "X:1\nT:Capelinha de Melão\nM:2/4\nL:1/4\nK:C\nG G E C | G G E2 | F F D B, | C4 |" },
-        { title: "Fui no Itororó", abc: "X:1\nT:Fui no Itororó\nM:2/4\nL:1/4\nK:C\nC E G A | G F E2 | D E F G | F E D C |" },
-        { title: "Bata Palmas", abc: "X:1\nT:Bata Palmas\nM:4/4\nL:1/4\nK:C\nC C E E | G G E2 | F F D D | B, B, C2 |" }
+        { title: "The Blarney Pilgrim", abc: "X:1\nT:Blarney Pilgrim\nM:6/8\nL:1/8\nK:Dmix\n|:DED DEG|A2A ABc|BAG AGE|GEA GED|DED DEG|A2A ABc|BAG AGE|GED D3:|" },
+        { title: "Connaughtman's Rambles", abc: "X:1\nT:Connaughtman's Rambles\nM:6/8\nL:1/8\nK:Dmaj\n|:FAA dAA|BAA dAG|FAA dfe|dBB BAG|FAA dAA|BAA def|gfe dfe|dBB BAG:|" },
+        { title: "The Musical Priest", abc: "X:1\nT:Musical Priest\nM:4/4\nL:1/8\nK:Bmin\n|:BA|FBBA B2Bd|cBAf ecBA|FBBA B2Bd|cBAc B2:|d2dc dfed|cA eA fAeA|dcBc defb|afec B2:|" },
+        { title: "Tam Lin", abc: "X:1\nT:Tam Lin\nM:4/4\nL:1/8\nK:Dmin\n|:A,2DA, FA,DA,|B,2DB, FB,DB,|C2EC GCEC|FEDC A,DDC|dA A2 FADA|dA A2 FADA|cG G2 EG G2|cG G2 cdec:|" },
+        { title: "Wind Shakes The Barley", abc: "X:1\nT:Wind That Shakes The Barley\nM:4/4\nL:1/8\nK:Dmaj\nA2AB AFED|B2BA BcdB|A2AB AFED|gfed BcdB|f2fd g2ge|f2fd Bcde|f2fd g2fg|afed Bcde:|" }
     ],
     nivelLa: [
-        { title: "A Barquinha", abc: "X:1\nT:A Barquinha\nM:3/4\nL:1/4\nK:C\nG A B | c2 A | G F E | D3 |" },
-        { title: "Se Esta Rua Fosse Minha", abc: "X:1\nT:Se Esta Rua\nM:3/4\nL:1/4\nK:C\nE F G | A2 A | G F E | D3 |" },
-        { title: "Oh! Susanna (Início)", abc: "X:1\nT:Oh! Susanna\nM:4/4\nL:1/4\nK:C\nC D E G | G A G E | C D E E | D C D2 |" },
-        { title: "Bela Rosa", abc: "X:1\nT:Bela Rosa\nM:2/4\nL:1/4\nK:C\nc A G F | E G C2 | D E F G | A G F2 |" },
-        { title: "Canção do Outono", abc: "X:1\nT:Canção do Outono\nM:4/4\nL:1/4\nK:C\nA G F E | D E F2 | G F E D | C D E2 |" }
+        { title: "The Banshee", abc: "X:1\nT:The Banshee\nM:4/4\nL:1/8\nK:Gmaj\n|:G2 GD EDEG|AGAB d2 Bd|eged BAGA|BAGE EDDE|ea a2 efgf|eBBA B2 Bd|eged BAGA|BAGE EDD2:|" },
+        { title: "Out On The Ocean", abc: "X:1\nT:Out On The Ocean\nM:6/8\nL:1/8\nK:Gmaj\n|:GE|D2B BAG|BdB A2B|GED G2A|B2B AGE|e2e edB|ege edB|d2B def|gfe dBA:|" },
+        { title: "Maid Behind The Bar", abc: "X:1\nT:Maid Behind The Bar\nM:4/4\nL:1/8\nK:Dmaj\n|:FAAB AFED|FAAB ABde|fBBA Bcde|fBBA BcdA|faab afde|fdad fd d2|efga beef|gebe gfeg:|" },
+        { title: "Banish Misfortune", abc: "X:1\nT:Banish Misfortune\nM:6/8\nL:1/8\nK:Dmix\n|:fed cAG|A2d cAG|F2D DED|FEF GFG|AGA cAG|AGA cde|fed cAG|Adc d3:|" },
+        { title: "The Silver Spear", abc: "X:1\nT:Silver Spear\nM:4/4\nL:1/8\nK:Dmaj\n|:FA A2 BAFA|dfed BddA|FA A2 BAFA|dfed Bd AG|fa a2 bfaf|gfed Bdde|fa a2 bfaf|gfed Bd A2:|" }
     ],
     nivelSi: [
-        { title: "Escala Completa", abc: "X:1\nT:Escala Completa\nM:4/4\nL:1/4\nK:C\nC D E F | G A B c | c B A G | F E D C |" },
-        { title: "Minueto em Sol (Tema)", abc: "X:1\nT:Minueto\nM:3/4\nL:1/4\nK:C\nG C D | E F G | c F E | D3 |" },
-        { title: "O Pastorzinho", abc: "X:1\nT:O Pastorzinho\nM:2/4\nL:1/4\nK:C\nC D E F | G A B c | G E F D | C4 |" },
-        { title: "Marcha Real", abc: "X:1\nT:Marcha Real\nM:4/4\nL:1/4\nK:C\nC2 E2 | G2 c2 | B A G F | E2 D2 | C4 |" },
-        { title: "Melodia Final", abc: "X:1\nT:Melodia Final\nM:4/4\nL:1/4\nK:C\nc B A G | F E D C | G2 B2 | c4 |" }
+        { title: "Morrison's Jig", abc: "X:1\nT:Morrison's\nM:6/8\nL:1/8\nK:Edor\n|:E3 B3|EBE AFD|EDE B3|dcB AFD|Bee fee|aee fee|Bee fee|a2g fed:|" },
+        { title: "The Butterfly", abc: "X:1\nT:The Butterfly\nM:9/8\nL:1/8\nK:Emin\n|:B2E G2E f3|B2E G2E FED|B2d e2f g3|B2d g2e dBA|B3 B2A G2A|B3 BAB dBA:|" },
+        { title: "Cooley's Reel", abc: "X:1\nT:Cooley's\nM:4/4\nL:1/8\nK:Edor\n|:D2|EBBA B2 EB|B2 AB dBAG|FDAD BDAD|FDAD dAFD|eB B2 efge|eB B2 gedB|A2 FA DAFA|A2 FA defg:|" },
+        { title: "The Kesh Jig", abc: "X:1\nT:The Kesh\nM:6/8\nL:1/8\nK:Gmaj\n|:G3 GAB|A3 ABd|edd gdd|edB dBA|B2B d2d|ege dBA|B2B dBG|ABA AGA:|" },
+        { title: "Drowsy Maggie", abc: "X:2\nT:Drowsy Maggie\nM:4/4\nL:1/8\nK:Edor\n|:E2 GE BEGE|E2 GE BEGE|D2 FD ADFD|D2 FD ADFD|d2 fd c2 ec|d2 fd c2 Bc|d2 fd c2 ec|Bdce dAFA:|" }
     ]
 };
