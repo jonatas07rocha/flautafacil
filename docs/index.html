@@ -3,179 +3,428 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flauta Fácil - Trilha</title>
+    <title>Mestre da Flauta - Edição Profissional</title>
+    
+    <!-- Bibliotecas Externas -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.2/dist/abcjs-basic-min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="js/songs.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #0F172A; color: #F8FAFC; overflow-x: hidden; }
-        .lesson-card.active { border-color: #3B82F6; background: #1E293B; transform: scale(1.02); }
-        .lesson-card.locked { opacity: 0.5; filter: grayscale(1); pointer-events: none; }
-        #notation { background: white; padding: 20px; border-radius: 1.5rem; color: #000; width: 100%; }
-        .flute-hole { fill: #334155; stroke: #475569; stroke-width: 2; }
+        :root { --app-height: 100dvh; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #0F172A; 
+            color: #F8FAFC; 
+            margin: 0; 
+            overflow: hidden; 
+            min-height: var(--app-height);
+        }
+        #root { height: var(--app-height); }
+        .scroll-container {
+            overflow-y: auto;
+            height: 100%;
+            scrollbar-width: thin;
+            scrollbar-color: #1E293B transparent;
+        }
+        
+        /* Blocos de notas com transição para destaque visual */
+        .note-block { 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            border-width: 2px; 
+            flex-shrink: 0; 
+        }
+        .note-block.active { 
+            transform: scale(1.1); 
+            border-color: #10B981; 
+            background-color: #064E3B; 
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.5); 
+            color: #34D399;
+            z-index: 10;
+        }
+        
+        .flute-hole { fill: #334155; stroke: #475569; stroke-width: 1.5; transition: fill 0.15s ease; }
         .flute-hole.closed { fill: #3B82F6; stroke: #DBEAFE; }
+        
+        /* Modais */
+        .modal-overlay {
+            background-color: rgba(2, 6, 23, 0.85);
+            backdrop-filter: blur(8px);
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .modal-content {
+            animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .no-select { user-select: none; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* Área de rolagem automática suave */
+        .auto-scroll-area {
+            scroll-behavior: smooth;
+        }
     </style>
 </head>
-<body class="p-4 pb-20">
+<body>
+    <div id="root"></div>
 
-    <header class="mb-8 flex justify-between items-center bg-slate-900/80 sticky top-0 z-50 p-4 rounded-2xl backdrop-blur-md border border-slate-800">
-        <div>
-            <h1 class="text-xl font-black tracking-tighter text-blue-400 uppercase">Flauta Fácil</h1>
-            <p id="progress-text" class="text-[10px] font-bold text-slate-500 uppercase">Lição 1 de 40</p>
-        </div>
-        <div class="flex gap-2">
-            <button onclick="toggleView('map')" class="p-2 bg-slate-800 rounded-lg" id="btn-map">🗺️</button>
-            <button onclick="toggleView('player')" class="p-2 bg-slate-800 rounded-lg hidden" id="btn-player">🎵</button>
-        </div>
-    </header>
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
 
-    <main class="max-w-xl mx-auto">
-        <div id="view-map" class="space-y-3">
-            <h2 class="text-sm font-black text-slate-500 uppercase mb-4 tracking-widest text-center">Sua Jornada Musical</h2>
-            <div id="lesson-list" class="flex flex-col gap-3">
-                </div>
-        </div>
+        const Icon = ({ name, size = 24, className = "", fill = "none" }) => {
+            const icons = {
+                Play: <polygon points="5 3 19 12 5 21 5 3" fill={fill === "currentColor" ? "currentColor" : fill} />,
+                X: <><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></>,
+                ChevronRight: <polyline points="9 18 15 12 9 6"></polyline>,
+                Music: <><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></>,
+                BookOpen: <><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></>,
+                Award: <><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></>,
+                ArrowLeft: <><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></>,
+                RotateCcw: <><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></>,
+                CheckCircle2: <><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></>,
+                Volume2: <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></>,
+                Mic2: <><path d="m12 8-9.04 9.06a2.82 2.82 0 1 0 3.98 3.98L16 12"></path><circle cx="17" cy="7" r="5"></circle></>,
+                Info: <><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></>,
+                ThumbsUp: <><path d="M7 10v12"></path><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"></path></>
+            };
 
-        <div id="view-player" class="hidden space-y-6">
-            <div class="bg-slate-900 p-6 rounded-[2rem] border border-slate-800">
-                <h2 id="player-title" class="text-2xl font-black mb-1">Título da Lição</h2>
-                <p id="player-desc" class="text-slate-400 text-sm mb-6">Descrição técnica ou rítmica.</p>
-                
-                <div id="notation-area" class="hidden mb-6">
-                    <div id="notation"></div>
-                </div>
-
-                <div id="exercise-area" class="text-center py-10">
-                    <button onclick="startPlayback()" class="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center mx-auto shadow-2xl hover:scale-105 active:scale-95 transition-all">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    </button>
-                    <p class="mt-4 text-xs font-bold text-blue-400 uppercase">Ouvir Referência</p>
-                </div>
-            </div>
-
-            <div class="bg-slate-900 p-8 rounded-[2.5rem] border border-slate-800 flex flex-col items-center gap-4">
-                <div id="flute-display" class="flex flex-col gap-3"></div>
-                <p id="note-name" class="text-2xl font-black text-white/20 uppercase tracking-tighter">--</p>
-            </div>
-
-            <button onclick="completeLesson()" class="w-full bg-emerald-500 text-emerald-950 font-black py-5 rounded-2xl text-lg shadow-xl hover:bg-emerald-400 transition-all">
-                CONCLUIR LIÇÃO
-            </button>
-        </div>
-    </main>
-
-    <script>
-        const FINGERINGS = {
-            'C': [1,1,1,1,1,1,1,1], 'D': [1,1,1,1,1,1,1,0], 'E': [1,1,1,1,1,1,0,0],
-            'F': [1,1,1,1,1,0,1,1], 'G': [1,1,1,1,0,0,0,0], 'A': [1,1,1,0,0,0,0,0], 'B': [1,1,0,0,0,0,0,0]
+            return (
+                <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width={size} 
+                    height={size} 
+                    viewBox="0 0 24 24" 
+                    fill={fill === "currentColor" ? "currentColor" : "none"} 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className={className}
+                >
+                    {icons[name]}
+                </svg>
+            );
         };
-        const FREQS = { 'C': 261.63, 'D': 293.66, 'E': 329.63, 'F': 349.23, 'G': 392.00, 'A': 440.00, 'B': 493.88 };
 
-        // Organização Linear: Técnica -> Músicas do nível
-        const LESSONS = [
-            { type: 'tech', title: 'A Primeira Nota: Dó', desc: 'Feche todos os furos com firmeza.', notes: ['C'] },
-            { type: 'song', title: 'Cai, Cai, Balão', abc: 'X:1\nM:2/4\nK:C\nG G | E E | G G | E2 | F/F/ F/F/ | E E | D D | C2 |' },
-            { type: 'song', title: 'Brilha Estrela', abc: 'X:1\nM:2/4\nK:C\nC C G G | A A G2 | F F E E | D D C2 |' },
-            { type: 'tech', title: 'Nota Ré', desc: 'Levante apenas o dedo mindinho.', notes: ['C', 'D'] },
-            { type: 'song', title: 'O Cravo e a Rosa', abc: 'X:1\nM:3/4\nK:C\nG G E | G G E | F F D | C3 |' },
-            { type: 'tech', title: 'Nota Mi', desc: 'Coordenação dos dedos da mão direita.', notes: ['C', 'D', 'E'] },
-            { type: 'song', title: 'Samba Lelê', abc: 'X:1\nM:2/4\nK:C\nG G F F | E E D2 | F F E E | D D C2 |' }
-        ];
+        const FREQS = { 'do_lat': 261.63, 're_lat': 293.66, 'mi_lat': 329.63, 'fa_lat': 349.23, 'sol_lat': 392.00, 'la_lat': 440.00, 'si_lat': 493.88 };
+        const LABELS = { 'do_lat': 'Dó', 're_lat': 'Ré', 'mi_lat': 'Mi', 'fa_lat': 'Fá', 'sol_lat': 'Sol', 'la_lat': 'Lá', 'si_lat': 'Si' };
+        const FINGERINGS = {
+            'do_lat': [true, true, true, true, true, true, true, true],
+            're_lat': [true, true, true, true, true, true, true, false],
+            'mi_lat': [true, true, true, true, true, true, false, false],
+            'fa_lat': [true, true, true, true, true, false, true, true],
+            'sol_lat': [true, true, true, true, false, false, false, false],
+            'la_lat': [true, true, true, false, false, false, false, false],
+            'si_lat': [true, true, false, false, false, false, false, false]
+        };
 
-        let currentLessonIdx = 0;
-        let audioCtx = null;
-
-        function renderMap() {
-            const list = document.getElementById('lesson-list');
-            list.innerHTML = '';
-            LESSONS.forEach((lesson, i) => {
-                const isLocked = i > currentLessonIdx;
-                const isActive = i === currentLessonIdx;
-                const card = document.createElement('div');
-                card.className = `lesson-card p-5 rounded-2xl border border-slate-800 flex items-center justify-between cursor-pointer transition-all ${isActive ? 'active' : ''} ${isLocked ? 'locked' : ''}`;
-                card.onclick = () => { if(!isLocked) loadLesson(i); };
-                
-                card.innerHTML = `
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-black ${lesson.type === 'tech' ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'}">
-                            ${lesson.type === 'tech' ? '⚙️' : '🎵'}
+        const Modal = ({ isOpen, onClose, title, iconName, children }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+                    <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-[2.5rem] overflow-hidden modal-content shadow-2xl">
+                        <div className="flex justify-between items-center p-6 border-b border-slate-800 bg-slate-900/50">
+                            <h3 className="text-xl font-bold flex items-center gap-3 text-white">
+                                {iconName && <Icon name={iconName} className="text-emerald-400" size={24} />}
+                                {title}
+                            </h3>
+                            <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-400">
+                                <Icon name="X" size={24} />
+                            </button>
                         </div>
-                        <div>
-                            <h3 class="font-bold text-sm">${lesson.title}</h3>
-                            <p class="text-[10px] text-slate-500 uppercase font-black tracking-widest">${lesson.type === 'tech' ? 'Técnica' : 'Música'}</p>
+                        <div className="p-8 scroll-container max-h-[75dvh]">
+                            {children}
                         </div>
                     </div>
-                    ${i < currentLessonIdx ? '<span class="text-emerald-500 font-bold text-xs">✓</span>' : ''}
-                `;
-                list.appendChild(card);
-            });
-            document.getElementById('progress-text').innerText = `Lição ${currentLessonIdx + 1} de ${LESSONS.length}`;
-        }
+                </div>
+            );
+        };
 
-        function loadLesson(idx) {
-            currentLessonIdx = idx;
-            const lesson = LESSONS[idx];
-            document.getElementById('player-title').innerText = lesson.title;
-            document.getElementById('player-desc').innerText = lesson.desc || 'Toque seguindo a partitura abaixo.';
+        const App = () => {
+            const [view, setView] = useState('menu'); 
+            const [levelIdx, setLevelIdx] = useState(0);
+            const [exerciseIdx, setExerciseIdx] = useState(0);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [activeNoteIdx, setActiveNoteIdx] = useState(-1);
+            const [audioReady, setAudioReady] = useState(false);
             
-            if(lesson.type === 'song') {
-                document.getElementById('notation-area').classList.remove('hidden');
-                document.getElementById('exercise-area').classList.add('hidden');
-                ABCJS.renderAbc("notation", lesson.abc, { responsive: "resize" });
-            } else {
-                document.getElementById('notation-area').classList.add('hidden');
-                document.getElementById('exercise-area').classList.remove('hidden');
-            }
-            
-            toggleView('player');
-            renderFlute('C');
-        }
+            const [hasListened, setHasListened] = useState(false);
+            const [showGuide, setShowGuide] = useState(false);
+            const [lessonComplete, setLessonComplete] = useState(false);
 
-        function toggleView(view) {
-            document.getElementById('view-map').classList.toggle('hidden', view !== 'map');
-            document.getElementById('view-player').classList.toggle('hidden', view !== 'player');
-            document.getElementById('btn-map').classList.toggle('hidden', view === 'map');
-            document.getElementById('btn-player').classList.toggle('hidden', view === 'player');
-        }
+            const [customSequence, setCustomSequence] = useState(null);
+            const [currentSongTitle, setCurrentSongTitle] = useState("");
 
-        function renderFlute(noteKey) {
-            const container = document.getElementById('flute-display');
-            container.innerHTML = '';
-            const pattern = FINGERINGS[noteKey] || [0,0,0,0,0,0,0,0];
-            pattern.forEach(closed => {
-                const svg = `<svg width="30" height="30"><circle cx="15" cy="15" r="12" class="flute-hole ${closed ? 'closed' : ''}"/></svg>`;
-                container.innerHTML += svg;
-            });
-            document.getElementById('note-name').innerText = noteKey;
-        }
+            const audioCtx = useRef(null);
+            const scrollRef = useRef(null); // Ref para o contêiner de notas
 
-        function startPlayback() {
-            if (!audioCtx) audioCtx = new AudioContext();
-            const notes = LESSONS[currentLessonIdx].notes || ['C'];
-            notes.forEach((n, i) => {
+            // Tradutor ABC robusto para letras maiúsculas e minúsculas
+            const parseABC = (abcString) => {
+                const notesMap = {
+                    'C': 'do_lat', 'D': 're_lat', 'E': 'mi_lat', 'F': 'fa_lat', 
+                    'G': 'sol_lat', 'A': 'la_lat', 'B': 'si_lat',
+                    'c': 'do_lat', 'd': 're_lat', 'e': 'mi_lat', 'f': 'fa_lat',
+                    'g': 'sol_lat', 'a': 'la_lat', 'b': 'si_lat'
+                };
+                
+                let notesPart = abcString;
+                if (abcString.includes('K:')) {
+                    notesPart = abcString.split(/K:[\w\s]*/)[1] || "";
+                }
+                
+                const regex = /([CDEFGABcdefgab])([\d/]*)/g;
+                const sequence = [];
+                let match;
+                while ((match = regex.exec(notesPart)) !== null) {
+                    let noteLetter = match[1];
+                    let modifier = match[2];
+                    let duration = 1;
+                    if (modifier.includes('2')) duration = 2;
+                    else if (modifier.includes('3')) duration = 3;
+                    else if (modifier.includes('4')) duration = 4;
+                    else if (modifier.includes('/')) duration = 0.5;
+                    
+                    if (notesMap[noteLetter]) sequence.push({ n: notesMap[noteLetter], d: duration });
+                }
+                return sequence;
+            };
+
+            const curriculum = useMemo(() => {
+                const baseLevels = [
+                    { id: 1, name: "Nível Dó", notes: ["do_lat"], dur: ["q", "h"], goal: "Embocadura firme e sopro contínuo no Dó grave." },
+                    { id: 2, name: "Nível Ré", notes: ["do_lat", "re_lat"], dur: ["q", "h"], goal: "Coordenação básica do dedo anelar e transição suave." },
+                    { id: 3, name: "Nível Mi", notes: ["do_lat", "re_lat", "mi_lat"], dur: ["q", "h"], goal: "Leitura de saltos entre as três notas iniciais." },
+                    { id: 4, name: "Nível Fá", notes: ["do_lat", "re_lat", "mi_lat", "fa_lat"], dur: ["q", "8"], goal: "Introdução da colcheia e ritmo sincopado simples." },
+                    { id: 5, name: "Nível Sol", notes: ["do_lat", "re_lat", "mi_lat", "fa_lat", "sol_lat"], dur: ["q", "8"], goal: "Domínio da mão esquerda e agilidade melódica." },
+                    { id: 6, name: "Nível Lá", notes: ["do_lat", "re_lat", "mi_lat", "fa_lat", "sol_lat", "la_lat"], dur: ["q", "h"], goal: "Exercícios de fôlego e notas longas de apoio." },
+                    { id: 7, name: "Nível Si", notes: ["do_lat", "re_lat", "mi_lat", "fa_lat", "sol_lat", "la_lat", "si_lat"], dur: ["q", "h", "8"], goal: "Escala diatônica completa de Dó Maior." }
+                ];
+                return baseLevels.map(lvl => {
+                    const exList = [];
+                    for (let i = 1; i <= 18; i++) {
+                        const sequence = [];
+                        const len = 4 + (i % 4);
+                        for (let j = 0; j < len; j++) {
+                            const isRest = j === len - 1 ? false : Math.random() < 0.1;
+                            sequence.push({
+                                n: isRest ? null : lvl.notes[Math.floor(Math.random() * lvl.notes.length)],
+                                d: lvl.dur[Math.floor(Math.random() * lvl.dur.length)] === 'h' ? 2 : (lvl.dur[Math.floor(Math.random() * lvl.dur.length)] === '8' ? 0.5 : 1)
+                            });
+                        }
+                        sequence[sequence.length - 1].n = lvl.notes[0];
+                        sequence[sequence.length - 1].d = 2;
+                        exList.push({ id: `L${lvl.id}-E${i}`, objective: `Exercício ${i}`, sequence });
+                    }
+                    return { ...lvl, exercises: exList };
+                });
+            }, []);
+
+            const currentLevel = curriculum[levelIdx];
+            const currentExercise = customSequence 
+                ? { objective: currentSongTitle, sequence: customSequence } 
+                : currentLevel.exercises[exerciseIdx];
+
+            // Reset de scroll ao mudar de lição
+            useEffect(() => {
+                setHasListened(false);
+                setActiveNoteIdx(-1);
+                if (scrollRef.current) scrollRef.current.scrollLeft = 0;
+            }, [exerciseIdx, levelIdx, customSequence]);
+
+            // Efeito de Scroll Automático para centralizar a nota ativa
+            useEffect(() => {
+                if (activeNoteIdx >= 0 && scrollRef.current) {
+                    const container = scrollRef.current;
+                    const activeElement = container.children[activeNoteIdx];
+                    if (activeElement) {
+                        const targetX = activeElement.offsetLeft - (container.offsetWidth / 2) + (activeElement.offsetWidth / 2);
+                        container.scrollTo({ left: targetX, behavior: 'smooth' });
+                    }
+                }
+            }, [activeNoteIdx]);
+
+            const initAudio = () => {
+                if (!audioCtx.current) {
+                    audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+                    setAudioReady(true);
+                }
+            };
+
+            const playNote = (note, duration, startTime) => {
+                if (!note || !FREQS[note]) return;
+                const osc = audioCtx.current.createOscillator();
+                const gain = audioCtx.current.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(FREQS[note], startTime);
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.15, startTime + 0.04);
+                gain.gain.setValueAtTime(0.15, startTime + duration - 0.05);
+                gain.gain.linearRampToValueAtTime(0, startTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.current.destination);
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            };
+
+            const startExercise = async () => {
+                if (!audioReady) initAudio();
+                if (isPlaying) return;
+                
+                if (scrollRef.current) scrollRef.current.scrollLeft = 0;
+                
+                setIsPlaying(true);
+                const beatUnit = 0.85; 
+                let scheduleTime = audioCtx.current.currentTime + 0.2;
+                currentExercise.sequence.forEach((item, idx) => {
+                    const dur = item.d * beatUnit;
+                    if (item.n) playNote(item.n, dur, scheduleTime);
+                    setTimeout(() => setActiveNoteIdx(idx), (scheduleTime - audioCtx.current.currentTime) * 1000);
+                    scheduleTime += dur;
+                });
                 setTimeout(() => {
-                    const osc = audioCtx.createOscillator();
-                    const g = audioCtx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.value = FREQS[n];
-                    g.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                    g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
-                    osc.connect(g);
-                    g.connect(audioCtx.destination);
-                    osc.start();
-                    osc.stop(audioCtx.currentTime + 0.8);
-                    renderFlute(n);
-                }, i * 1000);
-            });
-        }
+                    setIsPlaying(false);
+                    setActiveNoteIdx(-1);
+                    setHasListened(true);
+                }, (scheduleTime - audioCtx.current.currentTime) * 1000);
+            };
 
-        function completeLesson() {
-            if(currentLessonIdx < LESSONS.length - 1) currentLessonIdx++;
-            renderMap();
-            toggleView('map');
-        }
+            const nextLesson = () => {
+                setLessonComplete(false);
+                if (customSequence) { setCustomSequence(null); setView('menu'); return; }
+                if (exerciseIdx < currentLevel.exercises.length - 1) setExerciseIdx(prev => prev + 1);
+                else if (levelIdx < curriculum.length - 1) { setLevelIdx(prev => prev + 1); setExerciseIdx(0); }
+                else setView('menu');
+            };
 
-        renderMap();
+            const renderSongList = () => {
+                const keys = ['nivelDo', 'nivelRe', 'nivelMi', 'nivelFa', 'nivelSol', 'nivelLa', 'nivelSi'];
+                const currentSongs = (typeof songLibrary !== 'undefined') ? songLibrary[keys[levelIdx]] || [] : [];
+                return (
+                    <div className="flex flex-col h-full p-6 md:p-16 no-select max-w-4xl mx-auto">
+                        <button onClick={() => setView('menu')} className="mb-8 flex items-center gap-2 text-slate-400 font-bold hover:text-white transition-colors">
+                            <Icon name="ArrowLeft" size={20} /> Voltar ao Menu
+                        </button>
+                        <h2 className="text-4xl font-black text-emerald-500 uppercase mb-8">Estudos do Nível</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto no-scrollbar pb-20">
+                            {currentSongs.map((song, idx) => (
+                                <button key={idx} onClick={() => { setCustomSequence(parseABC(song.abc)); setCurrentSongTitle(song.title); setView('player'); }}
+                                    className="p-6 bg-slate-900 border border-slate-800 rounded-[2rem] hover:border-emerald-500 transition-all text-left flex items-center justify-between group">
+                                    <h4 className="font-black text-white">{song.title}</h4>
+                                    <Icon name="Play" size={18} fill="currentColor" className="text-emerald-500" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                );
+            };
+
+            if (view === 'menu') return (
+                <div className="scroll-container p-6 md:p-16">
+                    <div className="max-w-6xl mx-auto">
+                        <h1 className="text-6xl font-black text-emerald-500 mb-16 tracking-tighter uppercase">Mestre da Flauta</h1>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-32">
+                            {curriculum.map((lvl, i) => (
+                                <div key={lvl.id} className="bg-slate-900 rounded-[3rem] p-8 border border-slate-800 hover:border-emerald-500 transition-all flex flex-col group shadow-2xl">
+                                    <h3 className="font-extrabold text-3xl text-white mb-6 uppercase tracking-tight">{lvl.name}</h3>
+                                    <button onClick={() => { setLevelIdx(i); setExerciseIdx(0); setCustomSequence(null); setView('player'); }}
+                                        className="w-full bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black py-5 rounded-2xl transition-all flex items-center justify-center gap-2 mb-3">
+                                        INICIAR TREINO <Icon name="ChevronRight" size={20} />
+                                    </button>
+                                    <button onClick={() => { setLevelIdx(i); setView('songs'); }}
+                                        className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-700">
+                                        <Icon name="Music" size={18} /> ESTUDOS DO NÍVEL
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+
+            if (view === 'songs') return renderSongList();
+
+            return (
+                <div className="h-full flex flex-col p-4 md:p-12 no-select bg-slate-950 overflow-hidden">
+                    <div className="max-w-6xl mx-auto w-full flex flex-col h-full">
+                        <div className="flex items-center gap-8 py-4 mb-8">
+                            <button onClick={() => { setCustomSequence(null); setView('menu'); }} className="p-4 bg-slate-900 rounded-[1.5rem] text-slate-500 hover:text-white transition-all shadow-xl border border-slate-800">
+                                <Icon name="ArrowLeft" size={24} />
+                            </button>
+                            <div className="flex-1">
+                                <h2 className="text-2xl font-black text-white truncate">{currentExercise.objective}</h2>
+                                <p className="text-xs text-emerald-500 font-bold uppercase tracking-widest">{currentLevel.name}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 flex flex-col lg:flex-row gap-12 items-center justify-center min-h-0">
+                            <div className="flex-1 w-full flex flex-col justify-center gap-12 min-h-0">
+                                {/* ÁREA DE NOTAS COM SCROLL AUTOMÁTICO */}
+                                <div 
+                                    ref={scrollRef}
+                                    className="auto-scroll-area w-full flex items-center gap-3 overflow-x-auto no-scrollbar py-14 px-4 bg-slate-900/20 rounded-[3rem] border border-slate-800/30"
+                                >
+                                    {currentExercise.sequence.map((step, i) => (
+                                        <div key={i} className={`note-block rounded-[1.5rem] flex items-center justify-center font-black text-sm
+                                            ${step.n ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-transparent opacity-10'}
+                                            ${activeNoteIdx === i ? 'active' : ''}`}
+                                            style={{ minWidth: `${step.d * 90}px`, height: '90px' }}>
+                                            {step.n && LABELS[step.n].toUpperCase()}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="flex flex-col gap-4 max-w-sm mx-auto lg:mx-0">
+                                    {!isPlaying ? (
+                                        <button onClick={startExercise} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-6 rounded-[2rem] text-xl border border-slate-700 shadow-xl transition-all">
+                                            <Icon name="Volume2" size={28} className="inline mr-2" /> OUVIR REFERÊNCIA
+                                        </button>
+                                    ) : (
+                                        <div className="w-full py-6 text-center font-black text-emerald-500 bg-emerald-500/5 rounded-[2rem] animate-pulse border border-emerald-500/20 uppercase tracking-widest">Escutando...</div>
+                                    )}
+                                    {hasListened && !isPlaying && (
+                                        <button onClick={() => setLessonComplete(true)} className="w-full bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black py-7 rounded-[2rem] text-2xl shadow-[0_8px_0_#059669] active:translate-y-1 transition-all">
+                                            <Icon name="ThumbsUp" size={32} fill="currentColor" className="inline mr-2" /> ESTOU PRONTO
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="w-full lg:w-auto flex justify-center py-4 flex-shrink-0">
+                                <div className="bg-slate-900/80 p-10 lg:p-16 rounded-[6rem] border border-slate-800 shadow-2xl relative">
+                                    <svg viewBox="0 0 100 240" className="w-[110px] lg:w-[150px] h-auto">
+                                        <rect x="35" y="0" width="30" height="240" rx="15" fill="#1E293B" />
+                                        <circle className={`flute-hole ${activeNoteIdx >= 0 && currentExercise.sequence[activeNoteIdx].n && FINGERINGS[currentExercise.sequence[activeNoteIdx].n][0] ? 'closed' : ''}`} cx="85" cy="40" r="10" />
+                                        {[1,2,3,4,5,6,7].map(h => (
+                                            <circle key={h} className={`flute-hole ${activeNoteIdx >= 0 && currentExercise.sequence[activeNoteIdx].n && FINGERINGS[currentExercise.sequence[activeNoteIdx].n][h] ? 'closed' : ''}`} cx="50" cy={30 + (h * 26)} r="10" />
+                                        ))}
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <Modal isOpen={lessonComplete} onClose={() => setLessonComplete(false)} title="Concluído!" iconName="Trophy">
+                        <div className="text-center py-6">
+                            <Icon name="CheckCircle2" size={80} className="text-emerald-400 mx-auto mb-8" />
+                            <p className="text-slate-400 mb-12 px-6">Excelente! Você completou este desafio técnico com sucesso.</p>
+                            <button onClick={nextLesson} className="w-full bg-emerald-500 text-emerald-950 font-black py-5 rounded-[1.5rem] shadow-xl text-lg">
+                                {customSequence ? "VOLTAR AO MENU" : "PRÓXIMO DESAFIO"}
+                            </button>
+                        </div>
+                    </Modal>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
