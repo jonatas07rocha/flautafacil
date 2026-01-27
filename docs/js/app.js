@@ -1,10 +1,9 @@
-// js/app.js
 import { FREQS, LABELS, FINGERINGS } from './constants.js';
 import { songLibrary } from './songs.js';
 
 const { useState, useEffect, useRef, useMemo } = React;
 
-// --- Subcomponentes Auxiliares ---
+// --- Subcomponentes ---
 
 const Icon = ({ name, size = 24, className = "" }) => (
     <svg 
@@ -22,14 +21,13 @@ const Icon = ({ name, size = 24, className = "" }) => (
         {name === 'RotateCcw' && <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />}
         {name === 'Check' && <polyline points="20 6 9 17 4 12" />}
         {name === 'Award' && <path d="M12 15l-2 5L9 9l11 4-5 2zm0 0l2 5 2-11-11 4 5 2z" />}
-        {name === 'Music' && <path d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />}
     </svg>
 );
 
 const Modal = ({ isOpen, children }) => {
     if (!isOpen) return null;
     return (
-        <div className="modal-overlay">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="modal-content bg-slate-900 border border-slate-800 p-8 rounded-[3rem] max-w-sm w-full shadow-2xl text-center">
                 {children}
             </div>
@@ -49,7 +47,6 @@ const App = () => {
 
     const audioCtx = useRef(null);
 
-    // Expandido para os 7 níveis do curso
     const levels = useMemo(() => [
         { id: 'do', label: 'Nível Dó', notes: ['do_lat'], songKey: 'nivelDo' },
         { id: 're', label: 'Nível Ré', notes: ['do_lat', 're_lat'], songKey: 'nivelRe' },
@@ -79,10 +76,12 @@ const App = () => {
 
     useEffect(() => {
         const levelKey = levels[currentLevel].songKey;
-        if (mode === 'song' && songLibrary[levelKey]) {
-            ABCJS.renderAbc("notation", songLibrary[levelKey][currentSongIndex].abc, {
+        if (mode === 'song' && songLibrary[levelKey] && window.ABCJS) {
+            window.ABCJS.renderAbc("notation", songLibrary[levelKey][currentSongIndex].abc, {
                 responsive: "resize",
-                add_classes: true
+                add_classes: true,
+                paddingtop: 0,
+                paddingbottom: 0
             });
         }
     }, [mode, currentLevel, currentSongIndex, levels]);
@@ -120,10 +119,19 @@ const App = () => {
                 <h1 className="text-4xl font-black tracking-tighter mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent uppercase">
                     Flauta Fácil
                 </h1>
-                
                 <div className="inline-flex bg-slate-900/80 p-1 rounded-2xl border border-slate-800 mt-4">
-                    <button onClick={() => setMode('exercise')} className={`px-6 py-2 rounded-xl font-bold transition-all ${mode === 'exercise' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400'}`}>Treino</button>
-                    <button onClick={() => setMode('song')} className={`px-6 py-2 rounded-xl font-bold transition-all ${mode === 'song' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400'}`}>Músicas</button>
+                    <button 
+                        onClick={() => setMode('exercise')} 
+                        className={`px-6 py-2 rounded-xl font-bold transition-all ${mode === 'exercise' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400'}`}
+                    >
+                        Treino
+                    </button>
+                    <button 
+                        onClick={() => setMode('song')} 
+                        className={`px-6 py-2 rounded-xl font-bold transition-all ${mode === 'song' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400'}`}
+                    >
+                        Músicas
+                    </button>
                 </div>
             </header>
 
