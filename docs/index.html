@@ -3,245 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flauta Fácil - Pro</title>
+    <title>Flauta Fácil - Trilha</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.2/dist/abcjs-basic-min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0F172A; color: #F8FAFC; overflow-x: hidden; }
-        .flute-hole { fill: #334155; stroke: #475569; stroke-width: 2; transition: all 0.2s; }
+        .lesson-card.active { border-color: #3B82F6; background: #1E293B; transform: scale(1.02); }
+        .lesson-card.locked { opacity: 0.5; filter: grayscale(1); pointer-events: none; }
+        #notation { background: white; padding: 20px; border-radius: 1.5rem; color: #000; width: 100%; }
+        .flute-hole { fill: #334155; stroke: #475569; stroke-width: 2; }
         .flute-hole.closed { fill: #3B82F6; stroke: #DBEAFE; }
-        #notation { background: white; padding: 20px; border-radius: 1.5rem; min-height: 100px; margin: 1rem 0; color: #000; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="p-6">
+<body class="p-4 pb-20">
 
-    <header class="text-center mb-8">
-        <h1 class="text-4xl font-black tracking-tighter bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent uppercase">
-            Flauta Fácil
-        </h1>
-        <div class="inline-flex bg-slate-900 border border-slate-800 p-1 rounded-xl mt-4">
-            <button onclick="setMode('exercise')" id="btn-ex" class="px-6 py-2 rounded-lg font-bold bg-blue-600 transition-all">Treino</button>
-            <button onclick="setMode('song')" id="btn-song" class="px-6 py-2 rounded-lg font-bold transition-all">Músicas</button>
+    <header class="mb-8 flex justify-between items-center bg-slate-900/80 sticky top-0 z-50 p-4 rounded-2xl backdrop-blur-md border border-slate-800">
+        <div>
+            <h1 class="text-xl font-black tracking-tighter text-blue-400 uppercase">Flauta Fácil</h1>
+            <p id="progress-text" class="text-[10px] font-bold text-slate-500 uppercase">Lição 1 de 40</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="toggleView('map')" class="p-2 bg-slate-800 rounded-lg" id="btn-map">🗺️</button>
+            <button onclick="toggleView('player')" class="p-2 bg-slate-800 rounded-lg hidden" id="btn-player">🎵</button>
         </div>
     </header>
 
-    <main class="max-w-xl mx-auto space-y-6">
-        <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-800">
-            <button onclick="changeLevel(-1)" class="p-4 hover:bg-slate-800 rounded-xl">◀</button>
-            <div class="text-center">
-                <span id="level-label" class="block text-xs text-blue-400 font-bold uppercase">Nível 1</span>
-                <span id="level-name" class="text-xl font-bold uppercase tracking-tight">Nível Dó</span>
-            </div>
-            <button onclick="changeLevel(1)" class="p-4 hover:bg-slate-800 rounded-xl">▶</button>
+    <main class="max-w-xl mx-auto">
+        <div id="view-map" class="space-y-3">
+            <h2 class="text-sm font-black text-slate-500 uppercase mb-4 tracking-widest text-center">Sua Jornada Musical</h2>
+            <div id="lesson-list" class="flex flex-col gap-3">
+                </div>
         </div>
 
-        <div id="song-selector" class="hidden flex gap-2 overflow-x-auto no-scrollbar py-2"></div>
+        <div id="view-player" class="hidden space-y-6">
+            <div class="bg-slate-900 p-6 rounded-[2rem] border border-slate-800">
+                <h2 id="player-title" class="text-2xl font-black mb-1">Título da Lição</h2>
+                <p id="player-desc" class="text-slate-400 text-sm mb-6">Descrição técnica ou rítmica.</p>
+                
+                <div id="notation-area" class="hidden mb-6">
+                    <div id="notation"></div>
+                </div>
 
-        <div id="exercise-area" class="bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-800 text-center">
-            <button onclick="startExercise()" id="play-btn" class="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto shadow-xl hover:scale-105 active:scale-95 transition-all">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <div id="exercise-area" class="text-center py-10">
+                    <button onclick="startPlayback()" class="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center mx-auto shadow-2xl hover:scale-105 active:scale-95 transition-all">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    </button>
+                    <p class="mt-4 text-xs font-bold text-blue-400 uppercase">Ouvir Referência</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 p-8 rounded-[2.5rem] border border-slate-800 flex flex-col items-center gap-4">
+                <div id="flute-display" class="flex flex-col gap-3"></div>
+                <p id="note-name" class="text-2xl font-black text-white/20 uppercase tracking-tighter">--</p>
+            </div>
+
+            <button onclick="completeLesson()" class="w-full bg-emerald-500 text-emerald-950 font-black py-5 rounded-2xl text-lg shadow-xl hover:bg-emerald-400 transition-all">
+                CONCLUIR LIÇÃO
             </button>
-            <p class="mt-4 text-slate-400 text-sm font-medium uppercase tracking-widest">Ouvir Notas do Nível</p>
         </div>
-
-        <div id="notation-area" class="hidden">
-            <div id="notation"></div>
-        </div>
-
-        <div class="bg-slate-900/50 p-8 rounded-[3rem] border border-slate-800 flex flex-col items-center gap-3" id="flute-container">
-            </div>
     </main>
 
     <script>
-        // --- CONSTANTES ---
-        const FREQS = { 'do': 261.63, 're': 293.66, 'mi': 329.63, 'fa': 349.23, 'sol': 392.00, 'la': 440.00, 'si': 493.88 };
         const FINGERINGS = {
-            'do': [1,1,1,1,1,1,1,1], 're': [1,1,1,1,1,1,1,0], 'mi': [1,1,1,1,1,1,0,0],
-            'fa': [1,1,1,1,1,0,1,1], 'sol': [1,1,1,1,0,0,0,0], 'la': [1,1,1,0,0,0,0,0], 'si': [1,1,0,0,0,0,0,0]
+            'C': [1,1,1,1,1,1,1,1], 'D': [1,1,1,1,1,1,1,0], 'E': [1,1,1,1,1,1,0,0],
+            'F': [1,1,1,1,1,0,1,1], 'G': [1,1,1,1,0,0,0,0], 'A': [1,1,1,0,0,0,0,0], 'B': [1,1,0,0,0,0,0,0]
         };
-        const LEVELS = [
-            { id: 'do', label: 'Nível Dó', notes: ['do'], songKey: 'nivelDo' },
-            { id: 're', label: 'Nível Ré', notes: ['do', 're'], songKey: 'nivelRe' },
-            { id: 'mi', label: 'Nível Mi', notes: ['do', 're', 'mi'], songKey: 'nivelMi' },
-            { id: 'fa', label: 'Nível Fá', notes: ['do', 're', 'mi', 'fa'], songKey: 'nivelFa' },
-            { id: 'sol', label: 'Nível Sol', notes: ['do', 're', 'mi', 'fa', 'sol'], songKey: 'nivelSol' },
-            { id: 'la', label: 'Nível Lá', notes: ['do', 're', 'mi', 'fa', 'sol', 'la'], songKey: 'nivelLa' },
-            { id: 'si', label: 'Nível Si', notes: ['do', 're', 'mi', 'fa', 'sol', 'la', 'si'], songKey: 'nivelSi' }
+        const FREQS = { 'C': 261.63, 'D': 293.66, 'E': 329.63, 'F': 349.23, 'G': 392.00, 'A': 440.00, 'B': 493.88 };
+
+        // Organização Linear: Técnica -> Músicas do nível
+        const LESSONS = [
+            { type: 'tech', title: 'A Primeira Nota: Dó', desc: 'Feche todos os furos com firmeza.', notes: ['C'] },
+            { type: 'song', title: 'Cai, Cai, Balão', abc: 'X:1\nM:2/4\nK:C\nG G | E E | G G | E2 | F/F/ F/F/ | E E | D D | C2 |' },
+            { type: 'song', title: 'Brilha Estrela', abc: 'X:1\nM:2/4\nK:C\nC C G G | A A G2 | F F E E | D D C2 |' },
+            { type: 'tech', title: 'Nota Ré', desc: 'Levante apenas o dedo mindinho.', notes: ['C', 'D'] },
+            { type: 'song', title: 'O Cravo e a Rosa', abc: 'X:1\nM:3/4\nK:C\nG G E | G G E | F F D | C3 |' },
+            { type: 'tech', title: 'Nota Mi', desc: 'Coordenação dos dedos da mão direita.', notes: ['C', 'D', 'E'] },
+            { type: 'song', title: 'Samba Lelê', abc: 'X:1\nM:2/4\nK:C\nG G F F | E E D2 | F F E E | D D C2 |' }
         ];
 
-        // --- BIBLIOTECA COMPLETA (35 Músicas) ---
-        const songLibrary = {
-            nivelDo: [
-                { title: "Cai, Cai, Balão", abc: "X:1\nM:2/4\nL:1/4\nK:C\nG G | E E | G G | E2 | F/F/ F/F/ | E E | D D | C2 |" },
-                { title: "Brilha Estrela", abc: "X:1\nM:2/4\nL:1/4\nK:C\nC C G G | A A G2 | F F E E | D D C2 |" },
-                { title: "Dó Ré Mi", abc: "X:1\nM:4/4\nL:1/4\nK:C\nC2 D2 | E2 C2 | E2 C2 | E4 |" },
-                { title: "Sino de Belém", abc: "X:1\nM:2/4\nL:1/4\nK:C\nE E E2 | E E E2 | E G C D | E4 |" },
-                { title: "Pezinho", abc: "X:1\nM:2/4\nL:1/4\nK:C\nC C D D | E E C2 | D D E E | C4 |" }
-            ],
-            nivelRe: [
-                { title: "O Cravo e a Rosa", abc: "X:1\nM:3/4\nL:1/4\nK:C\nG G E | G G E | F F D | C3 |" },
-                { title: "Remando", abc: "X:1\nM:4/4\nL:1/4\nK:C\nE D C D | E E E2 | D D D2 | E G G2 |" },
-                { title: "Samba Lelê", abc: "X:1\nM:2/4\nL:1/4\nK:C\nG G F F | E E D2 | F F E E | D D C2 |" },
-                { title: "Marcha Soldado", abc: "X:1\nM:2/4\nL:1/4\nK:C\nG G E G | c c A G | F F E G | D D C2 |" },
-                { title: "Cirandinha", abc: "X:1\nM:2/4\nL:1/4\nK:C\nE E D D | C C G2 | F F E E | D D C2 |" }
-            ],
-            nivelMi: [
-                { title: "Little Lamb", abc: "X:1\nM:4/4\nL:1/4\nK:C\nE D C D | E E E2 | D D D2 | E G G2 |" },
-                { title: "Hino à Alegria", abc: "X:1\nM:4/4\nL:1/4\nK:C\nE E F G | G F E D | C C D E | E D D2 |" },
-                { title: "Frere Jacques", abc: "X:1\nM:4/4\nL:1/4\nK:C\nC D E C | C D E C | E F G2 | E F G2 |" },
-                { title: "Old Macdonald", abc: "X:1\nM:4/4\nL:1/4\nK:C\nG G G D | E E D2 | B B A A | G4 |" },
-                { title: "Atirei o Pau", abc: "X:1\nM:4/4\nL:1/4\nK:C\nG F E D | E F G2 | G G A G | F E D2 |" }
-            ],
-            nivelFa: [
-                { title: "London Bridge", abc: "X:1\nM:4/4\nL:1/4\nK:C\nG A G F | E F G2 | D E F2 | E F G2 |" },
-                { title: "Canoa Virou", abc: "X:1\nM:2/4\nL:1/4\nK:C\nA A G G | F F E2 | G G F F | E D C2 |" },
-                { title: "Terezinha", abc: "X:1\nM:3/4\nL:1/4\nK:C\nC E G | c2 A | G2 F | E3 |" },
-                { title: "Escravos de Jó", abc: "X:1\nM:2/4\nL:1/4\nK:C\nG E F G | G E F G | A G F E | D4 |" },
-                { title: "Boi da Cara Preta", abc: "X:1\nM:2/4\nL:1/4\nK:C\nE E D C | E E D2 | G G F E | D D C2 |" }
-            ],
-            nivelSol: [
-                { title: "Asa Branca", abc: "X:1\nM:2/4\nL:1/4\nK:C\nC D E | G2 G | E F | G2 G |" },
-                { title: "Twinkle Var", abc: "X:1\nM:4/4\nL:1/4\nK:C\nG G A A | G F E D | C C G G | F E D C |" },
-                { title: "Capelinha", abc: "X:1\nM:2/4\nL:1/4\nK:C\nG G E C | G G E2 | F F D B, | C4 |" },
-                { title: "Itororó", abc: "X:1\nM:2/4\nL:1/4\nK:C\nC E G A | G F E2 | D E F G | F E D C |" },
-                { title: "Bata Palmas", abc: "X:1\nM:4/4\nL:1/4\nK:C\nC C E E | G G E2 | F F D D | B, B, C2 |" }
-            ],
-            nivelLa: [
-                { title: "A Barquinha", abc: "X:1\nM:3/4\nL:1/4\nK:C\nG A B | c2 A | G F E | D3 |" },
-                { title: "Esta Rua", abc: "X:1\nM:3/4\nL:1/4\nK:C\nE F G | A2 A | G F E | D3 |" },
-                { title: "Oh! Susanna", abc: "X:1\nM:4/4\nL:1/4\nK:C\nC D E G | G A G E | C D E E | D C D2 |" },
-                { title: "Bela Rosa", abc: "X:1\nM:2/4\nL:1/4\nK:C\nc A G F | E G C2 | D E F G | A G F2 |" },
-                { title: "Outono", abc: "X:1\nM:4/4\nL:1/4\nK:C\nA G F E | D E F2 | G F E D | C D E2 |" }
-            ],
-            nivelSi: [
-                { title: "Escala", abc: "X:1\nM:4/4\nL:1/4\nK:C\nC D E F | G A B c | c B A G | F E D C |" },
-                { title: "Minueto", abc: "X:1\nM:3/4\nL:1/4\nK:C\nG C D | E F G | c F E | D3 |" },
-                { title: "Pastorzinho", abc: "X:1\nM:2/4\nL:1/4\nK:C\nC D E F | G A B c | G E F D | C4 |" },
-                { title: "Marcha Real", abc: "X:1\nM:4/4\nL:1/4\nK:C\nC2 E2 | G2 c2 | B A G F | E2 D2 | C4 |" },
-                { title: "Melodia Final", abc: "X:1\nM:4/4\nL:1/4\nK:C\nc B A G | F E D C | G2 B2 | c4 |" }
-            ]
-        };
-
-        // --- ESTADO ---
-        let currentLevelIdx = 0;
-        let mode = 'exercise';
+        let currentLessonIdx = 0;
         let audioCtx = null;
 
-        // --- LÓGICA DE INTERFACE ---
-        function init() {
-            renderFlute();
-            updateUI();
+        function renderMap() {
+            const list = document.getElementById('lesson-list');
+            list.innerHTML = '';
+            LESSONS.forEach((lesson, i) => {
+                const isLocked = i > currentLessonIdx;
+                const isActive = i === currentLessonIdx;
+                const card = document.createElement('div');
+                card.className = `lesson-card p-5 rounded-2xl border border-slate-800 flex items-center justify-between cursor-pointer transition-all ${isActive ? 'active' : ''} ${isLocked ? 'locked' : ''}`;
+                card.onclick = () => { if(!isLocked) loadLesson(i); };
+                
+                card.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-black ${lesson.type === 'tech' ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'}">
+                            ${lesson.type === 'tech' ? '⚙️' : '🎵'}
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm">${lesson.title}</h3>
+                            <p class="text-[10px] text-slate-500 uppercase font-black tracking-widest">${lesson.type === 'tech' ? 'Técnica' : 'Música'}</p>
+                        </div>
+                    </div>
+                    ${i < currentLessonIdx ? '<span class="text-emerald-500 font-bold text-xs">✓</span>' : ''}
+                `;
+                list.appendChild(card);
+            });
+            document.getElementById('progress-text').innerText = `Lição ${currentLessonIdx + 1} de ${LESSONS.length}`;
         }
 
-        function updateUI() {
-            const level = LEVELS[currentLevelIdx];
-            document.getElementById('level-label').innerText = `Nível ${currentLevelIdx + 1}`;
-            document.getElementById('level-name').innerText = level.label;
+        function loadLesson(idx) {
+            currentLessonIdx = idx;
+            const lesson = LESSONS[idx];
+            document.getElementById('player-title').innerText = lesson.title;
+            document.getElementById('player-desc').innerText = lesson.desc || 'Toque seguindo a partitura abaixo.';
             
-            if (mode === 'song') {
-                document.getElementById('exercise-area').classList.add('hidden');
+            if(lesson.type === 'song') {
                 document.getElementById('notation-area').classList.remove('hidden');
-                document.getElementById('song-selector').classList.remove('hidden');
-                renderSongSelector();
-                renderABC(0);
+                document.getElementById('exercise-area').classList.add('hidden');
+                ABCJS.renderAbc("notation", lesson.abc, { responsive: "resize" });
             } else {
-                document.getElementById('exercise-area').classList.remove('hidden');
                 document.getElementById('notation-area').classList.add('hidden');
-                document.getElementById('song-selector').classList.add('hidden');
+                document.getElementById('exercise-area').classList.remove('hidden');
             }
-            renderFlute();
+            
+            toggleView('player');
+            renderFlute('C');
         }
 
-        function setMode(newMode) {
-            mode = newMode;
-            document.getElementById('btn-ex').className = `px-6 py-2 rounded-lg font-bold transition-all ${mode === 'exercise' ? 'bg-blue-600' : 'text-slate-400'}`;
-            document.getElementById('btn-song').className = `px-6 py-2 rounded-lg font-bold transition-all ${mode === 'song' ? 'bg-emerald-600' : 'text-slate-400'}`;
-            updateUI();
+        function toggleView(view) {
+            document.getElementById('view-map').classList.toggle('hidden', view !== 'map');
+            document.getElementById('view-player').classList.toggle('hidden', view !== 'player');
+            document.getElementById('btn-map').classList.toggle('hidden', view === 'map');
+            document.getElementById('btn-player').classList.toggle('hidden', view === 'player');
         }
 
-        function changeLevel(dir) {
-            currentLevelIdx = Math.max(0, Math.min(LEVELS.length - 1, currentLevelIdx + dir));
-            updateUI();
-        }
-
-        // --- LÓGICA DE PARTITURA ---
-        function renderSongSelector() {
-            const selector = document.getElementById('song-selector');
-            selector.innerHTML = '';
-            const songs = songLibrary[LEVELS[currentLevelIdx].songKey] || [];
-            songs.forEach((song, i) => {
-                const btn = document.createElement('button');
-                btn.className = "flex-shrink-0 px-4 py-2 bg-slate-800 border border-slate-700 rounded-full text-xs font-bold hover:bg-emerald-900 transition-colors";
-                btn.innerText = song.title;
-                btn.onclick = () => renderABC(i);
-                selector.appendChild(btn);
-            });
-        }
-
-        function renderABC(index) {
-            const songs = songLibrary[LEVELS[currentLevelIdx].songKey];
-            if (songs && songs[index]) {
-                ABCJS.renderAbc("notation", songs[index].abc, { responsive: "resize" });
-            }
-        }
-
-        // --- LÓGICA DE ÁUDIO E DEDILHADO ---
-        function renderFlute(activeNoteId = null) {
-            const container = document.getElementById('flute-container');
+        function renderFlute(noteKey) {
+            const container = document.getElementById('flute-display');
             container.innerHTML = '';
-            
-            // Se nenhuma nota ativa for passada, mostra a nota principal do nível
-            const notesInLevel = LEVELS[currentLevelIdx].notes;
-            const noteId = activeNoteId || notesInLevel[notesInLevel.length - 1];
-            const pattern = FINGERINGS[noteId];
-
-            pattern.forEach(isClosed => {
-                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-                svg.setAttribute("width", "36");
-                svg.setAttribute("height", "36");
-                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                circle.setAttribute("cx", "18");
-                circle.setAttribute("cy", "18");
-                circle.setAttribute("r", "15");
-                circle.setAttribute("class", `flute-hole ${isClosed ? 'closed' : ''}`);
-                svg.appendChild(circle);
-                container.appendChild(svg);
+            const pattern = FINGERINGS[noteKey] || [0,0,0,0,0,0,0,0];
+            pattern.forEach(closed => {
+                const svg = `<svg width="30" height="30"><circle cx="15" cy="15" r="12" class="flute-hole ${closed ? 'closed' : ''}"/></svg>`;
+                container.innerHTML += svg;
             });
+            document.getElementById('note-name').innerText = noteKey;
         }
 
-        function playNote(noteId) {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(FREQS[noteId], audioCtx.currentTime);
-            
-            gain.gain.setValueAtTime(0, audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.1);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
-            
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            
-            osc.start();
-            osc.stop(audioCtx.currentTime + 1.2);
-            
-            renderFlute(noteId);
-            setTimeout(() => renderFlute(), 1000);
-        }
-
-        function startExercise() {
-            const notes = LEVELS[currentLevelIdx].notes;
+        function startPlayback() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            const notes = LESSONS[currentLessonIdx].notes || ['C'];
             notes.forEach((n, i) => {
-                setTimeout(() => playNote(n), i * 1100);
+                setTimeout(() => {
+                    const osc = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = FREQS[n];
+                    g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+                    osc.connect(g);
+                    g.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.8);
+                    renderFlute(n);
+                }, i * 1000);
             });
         }
 
-        init();
+        function completeLesson() {
+            if(currentLessonIdx < LESSONS.length - 1) currentLessonIdx++;
+            renderMap();
+            toggleView('map');
+        }
+
+        renderMap();
     </script>
 </body>
 </html>
