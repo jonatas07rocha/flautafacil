@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flauta Fácil - Versão Pura</title>
+    <title>Flauta Fácil - Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.2/dist/abcjs-basic-min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -11,8 +11,7 @@
         body { font-family: 'Inter', sans-serif; background-color: #0F172A; color: #F8FAFC; overflow-x: hidden; }
         .flute-hole { fill: #334155; stroke: #475569; stroke-width: 2; transition: all 0.2s; }
         .flute-hole.closed { fill: #3B82F6; stroke: #DBEAFE; }
-        #notation { background: white; padding: 20px; border-radius: 1.5rem; min-height: 100px; margin: 1rem 0; }
-        .active-note { background: #064E3B; color: #34D399; border: 2px solid #10B981; transform: scale(1.05); }
+        #notation { background: white; padding: 20px; border-radius: 1.5rem; min-height: 100px; margin: 1rem 0; color: #000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -23,27 +22,28 @@
             Flauta Fácil
         </h1>
         <div class="inline-flex bg-slate-900 border border-slate-800 p-1 rounded-xl mt-4">
-            <button onclick="setMode('exercise')" id="btn-ex" class="px-6 py-2 rounded-lg font-bold bg-blue-600">Treino</button>
-            <button onclick="setMode('song')" id="btn-song" class="px-6 py-2 rounded-lg font-bold">Músicas</button>
+            <button onclick="setMode('exercise')" id="btn-ex" class="px-6 py-2 rounded-lg font-bold bg-blue-600 transition-all">Treino</button>
+            <button onclick="setMode('song')" id="btn-song" class="px-6 py-2 rounded-lg font-bold transition-all">Músicas</button>
         </div>
     </header>
 
     <main class="max-w-xl mx-auto space-y-6">
         <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-800">
-            <button onclick="changeLevel(-1)" class="p-2">◀</button>
+            <button onclick="changeLevel(-1)" class="p-4 hover:bg-slate-800 rounded-xl">◀</button>
             <div class="text-center">
                 <span id="level-label" class="block text-xs text-blue-400 font-bold uppercase">Nível 1</span>
-                <span id="level-name" class="text-xl font-bold">Nível Dó</span>
+                <span id="level-name" class="text-xl font-bold uppercase tracking-tight">Nível Dó</span>
             </div>
-            <button onclick="changeLevel(1)" class="p-2">▶</button>
+            <button onclick="changeLevel(1)" class="p-4 hover:bg-slate-800 rounded-xl">▶</button>
         </div>
 
         <div id="song-selector" class="hidden flex gap-2 overflow-x-auto no-scrollbar py-2"></div>
 
         <div id="exercise-area" class="bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-800 text-center">
-            <button onclick="startExercise()" id="play-btn" class="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto shadow-xl hover:scale-105 transition-all">
+            <button onclick="startExercise()" id="play-btn" class="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto shadow-xl hover:scale-105 active:scale-95 transition-all">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             </button>
+            <p class="mt-4 text-slate-400 text-sm font-medium uppercase tracking-widest">Ouvir Notas do Nível</p>
         </div>
 
         <div id="notation-area" class="hidden">
@@ -55,7 +55,7 @@
     </main>
 
     <script>
-        // --- DADOS ---
+        // --- CONSTANTES ---
         const FREQS = { 'do': 261.63, 're': 293.66, 'mi': 329.63, 'fa': 349.23, 'sol': 392.00, 'la': 440.00, 'si': 493.88 };
         const FINGERINGS = {
             'do': [1,1,1,1,1,1,1,1], 're': [1,1,1,1,1,1,1,0], 'mi': [1,1,1,1,1,1,0,0],
@@ -71,35 +71,68 @@
             { id: 'si', label: 'Nível Si', notes: ['do', 're', 'mi', 'fa', 'sol', 'la', 'si'], songKey: 'nivelSi' }
         ];
 
-        // Músicas Simplificadas (Exemplos do Songs.js anterior)
+        // --- BIBLIOTECA COMPLETA (35 Músicas) ---
         const songLibrary = {
-            nivelDo: [{ title: "Cai Balão", abc: "X:1\nK:C\nG G E E | G G E2 | F/F/ F/F/ E E | D D C2 |" }],
-            nivelRe: [{ title: "O Cravo", abc: "X:1\nK:C\nG G E | G G E | F F D | C3 |" }],
-            nivelMi: [{ title: "Hino Alegria", abc: "X:1\nK:C\nE E F G | G F E D | C C D E | E D D2 |" }]
-            // ... (As 35 músicas podem ser coladas aqui)
+            nivelDo: [
+                { title: "Cai, Cai, Balão", abc: "X:1\nM:2/4\nL:1/4\nK:C\nG G | E E | G G | E2 | F/F/ F/F/ | E E | D D | C2 |" },
+                { title: "Brilha Estrela", abc: "X:1\nM:2/4\nL:1/4\nK:C\nC C G G | A A G2 | F F E E | D D C2 |" },
+                { title: "Dó Ré Mi", abc: "X:1\nM:4/4\nL:1/4\nK:C\nC2 D2 | E2 C2 | E2 C2 | E4 |" },
+                { title: "Sino de Belém", abc: "X:1\nM:2/4\nL:1/4\nK:C\nE E E2 | E E E2 | E G C D | E4 |" },
+                { title: "Pezinho", abc: "X:1\nM:2/4\nL:1/4\nK:C\nC C D D | E E C2 | D D E E | C4 |" }
+            ],
+            nivelRe: [
+                { title: "O Cravo e a Rosa", abc: "X:1\nM:3/4\nL:1/4\nK:C\nG G E | G G E | F F D | C3 |" },
+                { title: "Remando", abc: "X:1\nM:4/4\nL:1/4\nK:C\nE D C D | E E E2 | D D D2 | E G G2 |" },
+                { title: "Samba Lelê", abc: "X:1\nM:2/4\nL:1/4\nK:C\nG G F F | E E D2 | F F E E | D D C2 |" },
+                { title: "Marcha Soldado", abc: "X:1\nM:2/4\nL:1/4\nK:C\nG G E G | c c A G | F F E G | D D C2 |" },
+                { title: "Cirandinha", abc: "X:1\nM:2/4\nL:1/4\nK:C\nE E D D | C C G2 | F F E E | D D C2 |" }
+            ],
+            nivelMi: [
+                { title: "Little Lamb", abc: "X:1\nM:4/4\nL:1/4\nK:C\nE D C D | E E E2 | D D D2 | E G G2 |" },
+                { title: "Hino à Alegria", abc: "X:1\nM:4/4\nL:1/4\nK:C\nE E F G | G F E D | C C D E | E D D2 |" },
+                { title: "Frere Jacques", abc: "X:1\nM:4/4\nL:1/4\nK:C\nC D E C | C D E C | E F G2 | E F G2 |" },
+                { title: "Old Macdonald", abc: "X:1\nM:4/4\nL:1/4\nK:C\nG G G D | E E D2 | B B A A | G4 |" },
+                { title: "Atirei o Pau", abc: "X:1\nM:4/4\nL:1/4\nK:C\nG F E D | E F G2 | G G A G | F E D2 |" }
+            ],
+            nivelFa: [
+                { title: "London Bridge", abc: "X:1\nM:4/4\nL:1/4\nK:C\nG A G F | E F G2 | D E F2 | E F G2 |" },
+                { title: "Canoa Virou", abc: "X:1\nM:2/4\nL:1/4\nK:C\nA A G G | F F E2 | G G F F | E D C2 |" },
+                { title: "Terezinha", abc: "X:1\nM:3/4\nL:1/4\nK:C\nC E G | c2 A | G2 F | E3 |" },
+                { title: "Escravos de Jó", abc: "X:1\nM:2/4\nL:1/4\nK:C\nG E F G | G E F G | A G F E | D4 |" },
+                { title: "Boi da Cara Preta", abc: "X:1\nM:2/4\nL:1/4\nK:C\nE E D C | E E D2 | G G F E | D D C2 |" }
+            ],
+            nivelSol: [
+                { title: "Asa Branca", abc: "X:1\nM:2/4\nL:1/4\nK:C\nC D E | G2 G | E F | G2 G |" },
+                { title: "Twinkle Var", abc: "X:1\nM:4/4\nL:1/4\nK:C\nG G A A | G F E D | C C G G | F E D C |" },
+                { title: "Capelinha", abc: "X:1\nM:2/4\nL:1/4\nK:C\nG G E C | G G E2 | F F D B, | C4 |" },
+                { title: "Itororó", abc: "X:1\nM:2/4\nL:1/4\nK:C\nC E G A | G F E2 | D E F G | F E D C |" },
+                { title: "Bata Palmas", abc: "X:1\nM:4/4\nL:1/4\nK:C\nC C E E | G G E2 | F F D D | B, B, C2 |" }
+            ],
+            nivelLa: [
+                { title: "A Barquinha", abc: "X:1\nM:3/4\nL:1/4\nK:C\nG A B | c2 A | G F E | D3 |" },
+                { title: "Esta Rua", abc: "X:1\nM:3/4\nL:1/4\nK:C\nE F G | A2 A | G F E | D3 |" },
+                { title: "Oh! Susanna", abc: "X:1\nM:4/4\nL:1/4\nK:C\nC D E G | G A G E | C D E E | D C D2 |" },
+                { title: "Bela Rosa", abc: "X:1\nM:2/4\nL:1/4\nK:C\nc A G F | E G C2 | D E F G | A G F2 |" },
+                { title: "Outono", abc: "X:1\nM:4/4\nL:1/4\nK:C\nA G F E | D E F2 | G F E D | C D E2 |" }
+            ],
+            nivelSi: [
+                { title: "Escala", abc: "X:1\nM:4/4\nL:1/4\nK:C\nC D E F | G A B c | c B A G | F E D C |" },
+                { title: "Minueto", abc: "X:1\nM:3/4\nL:1/4\nK:C\nG C D | E F G | c F E | D3 |" },
+                { title: "Pastorzinho", abc: "X:1\nM:2/4\nL:1/4\nK:C\nC D E F | G A B c | G E F D | C4 |" },
+                { title: "Marcha Real", abc: "X:1\nM:4/4\nL:1/4\nK:C\nC2 E2 | G2 c2 | B A G F | E2 D2 | C4 |" },
+                { title: "Melodia Final", abc: "X:1\nM:4/4\nL:1/4\nK:C\nc B A G | F E D C | G2 B2 | c4 |" }
+            ]
         };
 
         // --- ESTADO ---
         let currentLevelIdx = 0;
-        let mode = 'exercise'; // 'exercise' ou 'song'
+        let mode = 'exercise';
         let audioCtx = null;
 
-        // --- LÓGICA ---
+        // --- LÓGICA DE INTERFACE ---
         function init() {
             renderFlute();
             updateUI();
-        }
-
-        function renderFlute(activeNoteId = null) {
-            const container = document.getElementById('flute-container');
-            container.innerHTML = '';
-            const noteId = activeNoteId || LEVELS[currentLevelIdx].notes[LEVELS[currentLevelIdx].notes.length - 1];
-            const pattern = FINGERINGS[noteId];
-
-            pattern.forEach(isClosed => {
-                const svg = `<svg width="36" height="36"><circle cx="18" cy="18" r="15" class="flute-hole ${isClosed ? 'closed' : ''}" /></svg>`;
-                container.innerHTML += svg;
-            });
         }
 
         function updateUI() {
@@ -118,27 +151,32 @@
                 document.getElementById('notation-area').classList.add('hidden');
                 document.getElementById('song-selector').classList.add('hidden');
             }
+            renderFlute();
         }
 
         function setMode(newMode) {
             mode = newMode;
-            document.getElementById('btn-ex').className = `px-6 py-2 rounded-lg font-bold ${mode === 'exercise' ? 'bg-blue-600' : ''}`;
-            document.getElementById('btn-song').className = `px-6 py-2 rounded-lg font-bold ${mode === 'song' ? 'bg-emerald-600' : ''}`;
+            document.getElementById('btn-ex').className = `px-6 py-2 rounded-lg font-bold transition-all ${mode === 'exercise' ? 'bg-blue-600' : 'text-slate-400'}`;
+            document.getElementById('btn-song').className = `px-6 py-2 rounded-lg font-bold transition-all ${mode === 'song' ? 'bg-emerald-600' : 'text-slate-400'}`;
             updateUI();
         }
 
         function changeLevel(dir) {
             currentLevelIdx = Math.max(0, Math.min(LEVELS.length - 1, currentLevelIdx + dir));
             updateUI();
-            renderFlute();
         }
 
+        // --- LÓGICA DE PARTITURA ---
         function renderSongSelector() {
             const selector = document.getElementById('song-selector');
             selector.innerHTML = '';
             const songs = songLibrary[LEVELS[currentLevelIdx].songKey] || [];
             songs.forEach((song, i) => {
-                selector.innerHTML += `<button onclick="renderABC(${i})" class="flex-shrink-0 px-4 py-2 bg-slate-800 rounded-full text-xs font-bold">${song.title}</button>`;
+                const btn = document.createElement('button');
+                btn.className = "flex-shrink-0 px-4 py-2 bg-slate-800 border border-slate-700 rounded-full text-xs font-bold hover:bg-emerald-900 transition-colors";
+                btn.innerText = song.title;
+                btn.onclick = () => renderABC(i);
+                selector.appendChild(btn);
             });
         }
 
@@ -149,26 +187,58 @@
             }
         }
 
+        // --- LÓGICA DE ÁUDIO E DEDILHADO ---
+        function renderFlute(activeNoteId = null) {
+            const container = document.getElementById('flute-container');
+            container.innerHTML = '';
+            
+            // Se nenhuma nota ativa for passada, mostra a nota principal do nível
+            const notesInLevel = LEVELS[currentLevelIdx].notes;
+            const noteId = activeNoteId || notesInLevel[notesInLevel.length - 1];
+            const pattern = FINGERINGS[noteId];
+
+            pattern.forEach(isClosed => {
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("width", "36");
+                svg.setAttribute("height", "36");
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", "18");
+                circle.setAttribute("cy", "18");
+                circle.setAttribute("r", "15");
+                circle.setAttribute("class", `flute-hole ${isClosed ? 'closed' : ''}`);
+                svg.appendChild(circle);
+                container.appendChild(svg);
+            });
+        }
+
         function playNote(noteId) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
             const osc = audioCtx.createOscillator();
-            const gain = audioCtx.current?.createGain() || audioCtx.createGain();
+            const gain = audioCtx.createGain();
+            
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(FREQS[noteId], audioCtx.currentTime);
+            
             gain.gain.setValueAtTime(0, audioCtx.currentTime);
             gain.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.1);
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+            
             osc.connect(gain);
             gain.connect(audioCtx.destination);
+            
             osc.start();
             osc.stop(audioCtx.currentTime + 1.2);
+            
             renderFlute(noteId);
             setTimeout(() => renderFlute(), 1000);
         }
 
         function startExercise() {
             const notes = LEVELS[currentLevelIdx].notes;
-            notes.forEach((n, i) => setTimeout(() => playNote(n), i * 1000));
+            notes.forEach((n, i) => {
+                setTimeout(() => playNote(n), i * 1100);
+            });
         }
 
         init();
