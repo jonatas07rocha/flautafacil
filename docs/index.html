@@ -3,75 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mestre da Flauta - Edição Profissional</title>
-    
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <title>Flauta Fácil - Versão Pura</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/abcjs@6.2.2/dist/abcjs-basic-min.js"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        :root { --app-height: 100dvh; }
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #0F172A; 
-            color: #F8FAFC; 
-            margin: 0; 
-            overflow: hidden; 
-            min-height: var(--app-height);
-        }
-        #root { height: var(--app-height); }
-        .scroll-container {
-            overflow-y: auto;
-            height: 100%;
-            scrollbar-width: thin;
-            scrollbar-color: #1E293B transparent;
-        }
-        .note-block { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border-width: 2px; flex-shrink: 0; }
-        .note-block.active { 
-            transform: scale(1.05); 
-            border-color: #10B981; 
-            background-color: #064E3B; 
-            box-shadow: 0 0 25px rgba(16, 185, 129, 0.4); 
-            color: #34D399;
-        }
-        .flute-hole { fill: #334155; stroke: #475569; stroke-width: 1.5; transition: fill 0.15s ease; }
+        body { font-family: 'Inter', sans-serif; background-color: #0F172A; color: #F8FAFC; overflow-x: hidden; }
+        .flute-hole { fill: #334155; stroke: #475569; stroke-width: 2; transition: all 0.2s; }
         .flute-hole.closed { fill: #3B82F6; stroke: #DBEAFE; }
-        
-        #notation {
-            background: #f8fafc;
-            padding: 20px;
-            border-radius: 2rem;
-            margin: 1.5rem 0;
-            min-height: 150px;
-        }
-
-        .modal-overlay {
-            background-color: rgba(2, 6, 23, 0.85);
-            backdrop-filter: blur(8px);
-            position: fixed;
-            inset: 0;
-            z-index: 50;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .no-select { user-select: none; -webkit-tap-highlight-color: transparent; }
+        #notation { background: white; padding: 20px; border-radius: 1.5rem; min-height: 100px; margin: 1rem 0; }
+        .active-note { background: #064E3B; color: #34D399; border: 2px solid #10B981; transform: scale(1.05); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body>
-    <div id="root"></div>
+<body class="p-6">
 
-    <script 
-        type="text/babel" 
-        data-type="module" 
-        data-plugins="transform-modules-umd" 
-        src="./js/app.js">
+    <header class="text-center mb-8">
+        <h1 class="text-4xl font-black tracking-tighter bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent uppercase">
+            Flauta Fácil
+        </h1>
+        <div class="inline-flex bg-slate-900 border border-slate-800 p-1 rounded-xl mt-4">
+            <button onclick="setMode('exercise')" id="btn-ex" class="px-6 py-2 rounded-lg font-bold bg-blue-600">Treino</button>
+            <button onclick="setMode('song')" id="btn-song" class="px-6 py-2 rounded-lg font-bold">Músicas</button>
+        </div>
+    </header>
+
+    <main class="max-w-xl mx-auto space-y-6">
+        <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-800">
+            <button onclick="changeLevel(-1)" class="p-2">◀</button>
+            <div class="text-center">
+                <span id="level-label" class="block text-xs text-blue-400 font-bold uppercase">Nível 1</span>
+                <span id="level-name" class="text-xl font-bold">Nível Dó</span>
+            </div>
+            <button onclick="changeLevel(1)" class="p-2">▶</button>
+        </div>
+
+        <div id="song-selector" class="hidden flex gap-2 overflow-x-auto no-scrollbar py-2"></div>
+
+        <div id="exercise-area" class="bg-slate-900/50 p-8 rounded-[2.5rem] border border-slate-800 text-center">
+            <button onclick="startExercise()" id="play-btn" class="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto shadow-xl hover:scale-105 transition-all">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+        </div>
+
+        <div id="notation-area" class="hidden">
+            <div id="notation"></div>
+        </div>
+
+        <div class="bg-slate-900/50 p-8 rounded-[3rem] border border-slate-800 flex flex-col items-center gap-3" id="flute-container">
+            </div>
+    </main>
+
+    <script>
+        // --- DADOS ---
+        const FREQS = { 'do': 261.63, 're': 293.66, 'mi': 329.63, 'fa': 349.23, 'sol': 392.00, 'la': 440.00, 'si': 493.88 };
+        const FINGERINGS = {
+            'do': [1,1,1,1,1,1,1,1], 're': [1,1,1,1,1,1,1,0], 'mi': [1,1,1,1,1,1,0,0],
+            'fa': [1,1,1,1,1,0,1,1], 'sol': [1,1,1,1,0,0,0,0], 'la': [1,1,1,0,0,0,0,0], 'si': [1,1,0,0,0,0,0,0]
+        };
+        const LEVELS = [
+            { id: 'do', label: 'Nível Dó', notes: ['do'], songKey: 'nivelDo' },
+            { id: 're', label: 'Nível Ré', notes: ['do', 're'], songKey: 'nivelRe' },
+            { id: 'mi', label: 'Nível Mi', notes: ['do', 're', 'mi'], songKey: 'nivelMi' },
+            { id: 'fa', label: 'Nível Fá', notes: ['do', 're', 'mi', 'fa'], songKey: 'nivelFa' },
+            { id: 'sol', label: 'Nível Sol', notes: ['do', 're', 'mi', 'fa', 'sol'], songKey: 'nivelSol' },
+            { id: 'la', label: 'Nível Lá', notes: ['do', 're', 'mi', 'fa', 'sol', 'la'], songKey: 'nivelLa' },
+            { id: 'si', label: 'Nível Si', notes: ['do', 're', 'mi', 'fa', 'sol', 'la', 'si'], songKey: 'nivelSi' }
+        ];
+
+        // Músicas Simplificadas (Exemplos do Songs.js anterior)
+        const songLibrary = {
+            nivelDo: [{ title: "Cai Balão", abc: "X:1\nK:C\nG G E E | G G E2 | F/F/ F/F/ E E | D D C2 |" }],
+            nivelRe: [{ title: "O Cravo", abc: "X:1\nK:C\nG G E | G G E | F F D | C3 |" }],
+            nivelMi: [{ title: "Hino Alegria", abc: "X:1\nK:C\nE E F G | G F E D | C C D E | E D D2 |" }]
+            // ... (As 35 músicas podem ser coladas aqui)
+        };
+
+        // --- ESTADO ---
+        let currentLevelIdx = 0;
+        let mode = 'exercise'; // 'exercise' ou 'song'
+        let audioCtx = null;
+
+        // --- LÓGICA ---
+        function init() {
+            renderFlute();
+            updateUI();
+        }
+
+        function renderFlute(activeNoteId = null) {
+            const container = document.getElementById('flute-container');
+            container.innerHTML = '';
+            const noteId = activeNoteId || LEVELS[currentLevelIdx].notes[LEVELS[currentLevelIdx].notes.length - 1];
+            const pattern = FINGERINGS[noteId];
+
+            pattern.forEach(isClosed => {
+                const svg = `<svg width="36" height="36"><circle cx="18" cy="18" r="15" class="flute-hole ${isClosed ? 'closed' : ''}" /></svg>`;
+                container.innerHTML += svg;
+            });
+        }
+
+        function updateUI() {
+            const level = LEVELS[currentLevelIdx];
+            document.getElementById('level-label').innerText = `Nível ${currentLevelIdx + 1}`;
+            document.getElementById('level-name').innerText = level.label;
+            
+            if (mode === 'song') {
+                document.getElementById('exercise-area').classList.add('hidden');
+                document.getElementById('notation-area').classList.remove('hidden');
+                document.getElementById('song-selector').classList.remove('hidden');
+                renderSongSelector();
+                renderABC(0);
+            } else {
+                document.getElementById('exercise-area').classList.remove('hidden');
+                document.getElementById('notation-area').classList.add('hidden');
+                document.getElementById('song-selector').classList.add('hidden');
+            }
+        }
+
+        function setMode(newMode) {
+            mode = newMode;
+            document.getElementById('btn-ex').className = `px-6 py-2 rounded-lg font-bold ${mode === 'exercise' ? 'bg-blue-600' : ''}`;
+            document.getElementById('btn-song').className = `px-6 py-2 rounded-lg font-bold ${mode === 'song' ? 'bg-emerald-600' : ''}`;
+            updateUI();
+        }
+
+        function changeLevel(dir) {
+            currentLevelIdx = Math.max(0, Math.min(LEVELS.length - 1, currentLevelIdx + dir));
+            updateUI();
+            renderFlute();
+        }
+
+        function renderSongSelector() {
+            const selector = document.getElementById('song-selector');
+            selector.innerHTML = '';
+            const songs = songLibrary[LEVELS[currentLevelIdx].songKey] || [];
+            songs.forEach((song, i) => {
+                selector.innerHTML += `<button onclick="renderABC(${i})" class="flex-shrink-0 px-4 py-2 bg-slate-800 rounded-full text-xs font-bold">${song.title}</button>`;
+            });
+        }
+
+        function renderABC(index) {
+            const songs = songLibrary[LEVELS[currentLevelIdx].songKey];
+            if (songs && songs[index]) {
+                ABCJS.renderAbc("notation", songs[index].abc, { responsive: "resize" });
+            }
+        }
+
+        function playNote(noteId) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.current?.createGain() || audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(FREQS[noteId], audioCtx.currentTime);
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 1.2);
+            renderFlute(noteId);
+            setTimeout(() => renderFlute(), 1000);
+        }
+
+        function startExercise() {
+            const notes = LEVELS[currentLevelIdx].notes;
+            notes.forEach((n, i) => setTimeout(() => playNote(n), i * 1000));
+        }
+
+        init();
     </script>
 </body>
 </html>
