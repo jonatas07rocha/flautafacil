@@ -139,44 +139,59 @@
             const fullCurriculum = useMemo(() => {
                 const trail = [];
                 const lib = typeof songLibrary !== "undefined" ? songLibrary : {};
-                
                 const sortedKeys = ['nivelSi', 'nivelLa', 'nivelSol', 'nivelDo', 'nivelRe', 'nivelFa', 'nivelMi'];
 
                 sortedKeys.forEach(key => {
                     const songs = lib[key];
-                    if (!songs) return;
-
+                    if (!songs || songs.length === 0) return;
                     const config = LEVEL_CONFIG[key] || { name: key, notes: ['si_lat'] };
 
-                    // Gerar Exercícios
-                    for (let i = 1; i <= 2; i++) {
-                        let sequence, seqStr;
-                        do {
-                            sequence = Array(4).fill(0).map(() => ({
-                                n: config.notes[Math.floor(Math.random() * config.notes.length)],
-                                d: Math.random() > 0.8 ? 2 : 1
-                            }));
-                            seqStr = JSON.stringify(sequence);
-                        } while (seqStr === lastSeqRef.current);
-                        lastSeqRef.current = seqStr;
+                    // 1. PRIMEIRA MÚSICA (Apresentação Sensorial)
+                    const firstSong = songs[0];
+                    const firstSongParsed = parseABC(firstSong.abc);
+                    trail.push({
+                        type: 'song',
+                        title: firstSong.title,
+                        levelName: config.name,
+                        sequence: firstSongParsed
+                    });
 
-                        trail.push({
-                            type: 'lesson',
-                            title: `Estudo ${i}: ${config.name}`,
-                            levelName: config.name,
-                            sequence
+                    // 2. EXERCÍCIO 1 (Dirigido pelas notas da primeira música)
+                    const songNotes = [...new Set(firstSongParsed.map(n => n.n))];
+                    let seq1, str1;
+                    do {
+                        seq1 = Array(4).fill(0).map(() => ({
+                            n: songNotes[Math.floor(Math.random() * songNotes.length)],
+                            d: Math.random() > 0.8 ? 2 : 1
+                        }));
+                        str1 = JSON.stringify(seq1);
+                    } while (str1 === lastSeqRef.current);
+                    lastSeqRef.current = str1;
+                    trail.push({ type: 'lesson', title: `Estudo Técnico I`, levelName: config.name, sequence: seq1 });
+
+                    // 3. EXERCÍCIO 2 (Livre com todas as notas do nível)
+                    let seq2, str2;
+                    do {
+                        seq2 = Array(4).fill(0).map(() => ({
+                            n: config.notes[Math.floor(Math.random() * config.notes.length)],
+                            d: Math.random() > 0.8 ? 2 : 1
+                        }));
+                        str2 = JSON.stringify(seq2);
+                    } while (str2 === lastSeqRef.current);
+                    lastSeqRef.current = str2;
+                    trail.push({ type: 'lesson', title: `Estudo Técnico II`, levelName: config.name, sequence: seq2 });
+
+                    // 4. MÚSICAS RESTANTES (Consolidação)
+                    if (songs.length > 1) {
+                        songs.slice(1).forEach(song => {
+                            trail.push({
+                                type: 'song',
+                                title: song.title,
+                                levelName: config.name,
+                                sequence: parseABC(song.abc)
+                            });
                         });
                     }
-
-                    // Adicionar Músicas
-                    songs.forEach(song => {
-                        trail.push({
-                            type: 'song',
-                            title: song.title,
-                            levelName: config.name,
-                            sequence: parseABC(song.abc)
-                        });
-                    });
                 });
 
                 return trail;
@@ -203,18 +218,14 @@
                 setIsPlaying(true);
                 if (!audioCtx.current) audioCtx.current = new AudioContext();
                 let time = audioCtx.current.currentTime + 0.1;
-                
                 activeItem.sequence.forEach((item, idx) => {
                     const d = item.d * 0.7;
                     playNote(item.n, d, time);
                     setTimeout(() => setActiveNoteIdx(idx), (time - audioCtx.current.currentTime) * 1000);
                     time += d;
                 });
-                
                 setTimeout(() => { 
-                    setIsPlaying(false); 
-                    setActiveNoteIdx(-1); 
-                    setHasListened(true); 
+                    setIsPlaying(false); setActiveNoteIdx(-1); setHasListened(true); 
                 }, (time - audioCtx.current.currentTime) * 1000);
             };
 
