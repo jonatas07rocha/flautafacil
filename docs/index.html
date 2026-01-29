@@ -91,6 +91,16 @@
             'do_lat':  [true, true, true, true, true, true, true, true]
         };
 
+        const LEVEL_CONFIG = {
+            nivelSi: { name: "Nobre Si", notes: ['si_lat'] },
+            nivelLa: { name: "Lá Imperial", notes: ['si_lat', 'la_lat'] },
+            nivelSol: { name: "Sol de Versalhes", notes: ['si_lat', 'la_lat', 'sol_lat'] },
+            nivelDo: { name: "Dó das Nuvens", notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat'] },
+            nivelRe: { name: "Ré Majestoso", notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat', 're2_lat'] },
+            nivelFa: { name: "Descida ao Fá", notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat', 're2_lat', 'fa_lat'] },
+            nivelMi: { name: "A Flauta Completa", notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat', 're2_lat', 'fa_lat', 'mi_lat', 're_lat', 'do_lat'] }
+        };
+
         const OrnateIcon = ({ name, size = 24, className = "" }) => {
             const icons = {
                 Lock: <path d="M7 11V7a5 5 0 0 1 10 0v4M8 11h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z" />,
@@ -104,16 +114,13 @@
 
         const App = () => {
             const [view, setView] = useState('map');
-            const [userProgress, setUserProgress] = useState(() => {
-                const saved = localStorage.getItem('userProgress');
-                return saved ? parseInt(saved) : 0;
-            });
+            const [userProgress, setUserProgress] = useState(() => parseInt(localStorage.getItem('userProgress')) || 0);
             const [activeItem, setActiveItem] = useState(null);
             const [isPlaying, setIsPlaying] = useState(false);
             const [activeNoteIdx, setActiveNoteIdx] = useState(-1);
             const [hasListened, setHasListened] = useState(false);
             const audioCtx = useRef(null);
-            const lastSequenceRef = useRef("");
+            const lastSeqRef = useRef("");
 
             const parseABC = (abc) => {
                 const map = { 'B': 'si_lat', 'A': 'la_lat', 'G': 'sol_lat', 'c': 'do2_lat', 'd': 're2_lat', 'F': 'fa_lat', 'E': 'mi_lat', 'D': 're_lat', 'C': 'do_lat' };
@@ -131,49 +138,51 @@
 
             const fullCurriculum = useMemo(() => {
                 const trail = [];
-                const library = typeof songLibrary !== "undefined" ? songLibrary : null;
+                const lib = typeof songLibrary !== "undefined" ? songLibrary : {};
                 
-                if (!library || !library.levels) return trail;
+                const sortedKeys = ['nivelSi', 'nivelLa', 'nivelSol', 'nivelDo', 'nivelRe', 'nivelFa', 'nivelMi'];
 
-                library.levels.forEach((level) => {
+                sortedKeys.forEach(key => {
+                    const songs = lib[key];
+                    if (!songs) return;
+
+                    const config = LEVEL_CONFIG[key] || { name: key, notes: ['si_lat'] };
+
+                    // Gerar Exercícios
                     for (let i = 1; i <= 2; i++) {
-                        let sequence;
-                        let seqString;
+                        let sequence, seqStr;
                         do {
                             sequence = Array(4).fill(0).map(() => ({
-                                n: level.notes[Math.floor(Math.random() * level.notes.length)],
+                                n: config.notes[Math.floor(Math.random() * config.notes.length)],
                                 d: Math.random() > 0.8 ? 2 : 1
                             }));
-                            seqString = JSON.stringify(sequence);
-                        } while (seqString === lastSequenceRef.current);
-                        lastSequenceRef.current = seqString;
+                            seqStr = JSON.stringify(sequence);
+                        } while (seqStr === lastSeqRef.current);
+                        lastSeqRef.current = seqStr;
 
                         trail.push({
                             type: 'lesson',
-                            title: `Estudo ${i}`,
-                            levelName: level.name,
-                            sequence: sequence
+                            title: `Estudo ${i}: ${config.name}`,
+                            levelName: config.name,
+                            sequence
                         });
                     }
 
-                    if (level.songs) {
-                        level.songs.forEach(song => {
-                            trail.push({
-                                type: 'song',
-                                title: song.title,
-                                levelName: level.name,
-                                sequence: parseABC(song.abc)
-                            });
+                    // Adicionar Músicas
+                    songs.forEach(song => {
+                        trail.push({
+                            type: 'song',
+                            title: song.title,
+                            levelName: config.name,
+                            sequence: parseABC(song.abc)
                         });
-                    }
+                    });
                 });
 
                 return trail;
             }, []);
 
-            useEffect(() => {
-                localStorage.setItem('userProgress', userProgress);
-            }, [userProgress]);
+            useEffect(() => { localStorage.setItem('userProgress', userProgress); }, [userProgress]);
 
             const playNote = (note, duration, start) => {
                 if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -192,8 +201,8 @@
             const startPlayback = () => {
                 if (isPlaying) return;
                 setIsPlaying(true);
-                let time = audioCtx.current?.currentTime || 0.2;
-                if (!audioCtx.current) { audioCtx.current = new AudioContext(); time = 0.2; }
+                if (!audioCtx.current) audioCtx.current = new AudioContext();
+                let time = audioCtx.current.currentTime + 0.1;
                 
                 activeItem.sequence.forEach((item, idx) => {
                     const d = item.d * 0.7;
@@ -213,7 +222,7 @@
                 <div className="min-h-screen p-8 flex flex-col items-center">
                     <header className="text-center mb-16">
                         <h1 className="baroque-title text-5xl md:text-7xl text-[#D4AF37] mb-2 uppercase tracking-tighter">Academia Real</h1>
-                        <p className="text-[#B8860B] uppercase tracking-[0.4em] text-[10px] font-bold">Método de Sopro Imperial</p>
+                        <p className="text-[#B8860B] uppercase tracking-[0.4em] text-[10px] font-bold">Consumindo Biblioteca de Músicas</p>
                     </header>
                     <div className="flex flex-wrap justify-center gap-8 max-w-7xl pb-40">
                         {fullCurriculum.map((item, idx) => {
@@ -239,7 +248,7 @@
 
             return (
                 <div className="min-h-screen p-4 md:p-10 flex flex-col items-center">
-                    <button onClick={() => setView('map')} className="self-start text-[#D4AF37] uppercase text-[10px] font-bold tracking-[0.3em] mb-10">← Voltar ao Mapa</button>
+                    <button onClick={() => setView('map')} className="self-start text-[#D4AF37] uppercase text-[10px] font-bold tracking-[0.3em] mb-10">← Voltar</button>
                     <div className="w-full max-w-5xl bg-[#2a1b0a] border-4 border-double border-[#D4AF37]/40 rounded-lg shadow-2xl p-8 md:p-12 flex flex-col lg:flex-row items-center gap-12">
                         <div className="flex-1 w-full space-y-8">
                             <div className="text-center lg:text-left">
@@ -274,4 +283,4 @@
         root.render(<App />);
     </script>
 </body>
-</html>```
+</html>
