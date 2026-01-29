@@ -5,13 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Academia Real de Flauta - Edição Imperial</title>
     
-    <!-- Bibliotecas -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Estilo Barroco -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     
     <style>
@@ -72,7 +70,6 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
-        // --- DEFINIÇÕES TÉCNICAS (Frequências e Dedilhados) ---
         const FREQS = { 
             'do_lat': 261.63, 're_lat': 293.66, 'mi_lat': 329.63, 'fa_lat': 349.23, 'sol_lat': 392.00, 'la_lat': 440.00, 'si_lat': 493.88,
             'do2_lat': 523.25, 're2_lat': 587.33
@@ -85,8 +82,8 @@
             'si_lat':  [true, true, false, false, false, false, false, false],
             'la_lat':  [true, true, true, false, false, false, false, false],
             'sol_lat': [true, true, true, true, false, false, false, false],
-            'do2_lat': [true, false, true, false, false, false, false, false], // Dó Agudo
-            're2_lat': [false, false, true, false, false, false, false, false], // Ré Agudo
+            'do2_lat': [true, false, true, false, false, false, false, false],
+            're2_lat': [false, false, true, false, false, false, false, false],
             'fa_lat':  [true, true, true, true, true, false, true, true],
             'mi_lat':  [true, true, true, true, true, true, false, false],
             're_lat':  [true, true, true, true, true, true, true, false],
@@ -106,13 +103,21 @@
 
         const App = () => {
             const [view, setView] = useState('map');
-            const [userProgress, setUserProgress] = useState(0);
+            const [userProgress, setUserProgress] = useState(() => {
+                const saved = localStorage.getItem('userProgress');
+                return saved ? parseInt(saved) : 0;
+            });
             const [activeItem, setActiveItem] = useState(null);
             const [isPlaying, setIsPlaying] = useState(false);
             const [activeNoteIdx, setActiveNoteIdx] = useState(-1);
+            const [hasListened, setHasListened] = useState(false);
             const audioCtx = useRef(null);
+            const lastGeneratedSequence = useRef("");
 
-            // --- TRADUTOR ABC MELHORADO ---
+            useEffect(() => {
+                localStorage.setItem('userProgress', userProgress);
+            }, [userProgress]);
+
             const parseABC = (abc) => {
                 const map = { 'B': 'si_lat', 'A': 'la_lat', 'G': 'sol_lat', 'c': 'do2_lat', 'd': 're2_lat', 'F': 'fa_lat', 'E': 'mi_lat', 'D': 're_lat', 'C': 'do_lat' };
                 const regex = /([ABCDEFGcdefg])([>]*)([\d/]*)/g;
@@ -127,32 +132,39 @@
                 return seq;
             };
 
-            // --- NOVO CURRÍCULO ACUMULATIVO ---
             const fullCurriculum = useMemo(() => {
                 const stages = [
-                    { id: 'si', name: 'Nobre Si', notes: ['si_lat'], songs: [{t: "Sopro do Sino", a: "B2 B2 B4"}] },
-                    { id: 'la', name: 'Lá Imperial', notes: ['si_lat', 'la_lat'], songs: [{t: "Dueto de Prata", a: "B A B2 A2"}] },
-                    { id: 'sol', name: 'Sol de Versalhes', notes: ['si_lat', 'la_lat', 'sol_lat'], songs: [
-                        {t: "Mary Had a Little Lamb", a: "B A G A | B B B2 | A A A2 | B B B2"},
-                        {t: "Au Clair de la Lune", a: "G G G A | B2 A2 | G B A A | G4"}
-                    ]},
-                    { id: 'do2', name: 'Dó das Nuvens', notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat'], songs: [{t: "Escada de Cristal", a: "G A B c c B A G"}] },
-                    { id: 're2', name: 'Ré Majestoso', notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat', 're2_lat'], songs: [
-                        {t: "Ode to Joy", a: "B B c d | d c B A | G G A B | B>A A2"},
-                        {t: "Jingle Bells", a: "B B B2 | B B B2 | B d G A | B4"}
-                    ]},
-                    { id: 'fa_mi', name: 'Descida ao Fá/Mi', notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat', 're2_lat', 'fa_lat', 'mi_lat'], songs: [{t: "Twinkle Twinkle", a: "G G d d | e e d2 | c c B B | A A G2"}] },
-                    { id: 'completo', name: 'A Flauta Completa', notes: ['do_lat', 're_lat', 'mi_lat', 'fa_lat', 'sol_lat', 'la_lat', 'si_lat', 'do2_lat', 're2_lat'], songs: [
-                        {t: "The Kesh Jig", a: "G3 G A B | A3 A B d | e d d g d d | e d B d B A"}
-                    ]}
+                    { id: 'si', name: 'Nobre Si', notes: ['si_lat'], lib: 'nivelSi' },
+                    { id: 'la', name: 'Lá Imperial', notes: ['si_lat', 'la_lat'], lib: 'nivelLa' },
+                    { id: 'sol', name: 'Sol de Versalhes', notes: ['si_lat', 'la_lat', 'sol_lat'], lib: 'nivelSol' },
+                    { id: 'do2', name: 'Dó das Nuvens', notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat'], lib: 'nivelDo' },
+                    { id: 're2', name: 'Ré Majestoso', notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat', 're2_lat'], lib: 'nivelRe' },
+                    { id: 'fa_mi', name: 'Descida ao Fá/Mi', notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat', 're2_lat', 'fa_lat', 'mi_lat'], lib: 'nivelFa' },
+                    { id: 'completo', name: 'A Flauta Completa', notes: ['do_lat', 're_lat', 'mi_lat', 'fa_lat', 'sol_lat', 'la_lat', 'si_lat', 'do2_lat', 're2_lat'], lib: 'nivelMi' }
                 ];
 
                 const trail = [];
                 stages.forEach(s => {
-                    for (let i = 1; i <= 3; i++) { // Simplificado para 3 exercícios por nota nesta demo
-                        trail.push({ type: 'lesson', title: `Estudo ${i}: ${s.name}`, level: s.name, sequence: Array(4).fill(0).map(() => ({ n: s.notes[Math.floor(Math.random() * s.notes.length)], d: 1 })) });
+                    for (let i = 1; i <= 3; i++) {
+                        let sequence;
+                        let seqString;
+                        do {
+                            sequence = Array(4).fill(0).map(() => ({ 
+                                n: s.notes[Math.floor(Math.random() * s.notes.length)], 
+                                d: Math.random() > 0.8 ? 2 : 1 
+                            }));
+                            seqString = JSON.stringify(sequence);
+                        } while (seqString === lastGeneratedSequence.current);
+                        
+                        lastGeneratedSequence.current = seqString;
+                        trail.push({ type: 'lesson', title: `Estudo ${i}: ${s.name}`, level: s.name, sequence });
                     }
-                    s.songs.forEach(song => trail.push({ type: 'song', title: song.t, level: s.name, sequence: parseABC(song.a) }));
+                    
+                    if (window.songLibrary && window.songLibrary[s.lib]) {
+                        window.songLibrary[s.lib].forEach(song => {
+                            trail.push({ type: 'song', title: song.title, level: s.name, sequence: parseABC(song.abc) });
+                        });
+                    }
                 });
                 return trail;
             }, []);
@@ -182,7 +194,17 @@
                     setTimeout(() => setActiveNoteIdx(idx), (time - audioCtx.current.currentTime) * 1000);
                     time += d;
                 });
-                setTimeout(() => { setIsPlaying(false); setActiveNoteIdx(-1); setHasListened(true); }, (time - audioCtx.current.currentTime) * 1000);
+                setTimeout(() => { 
+                    setIsPlaying(false); 
+                    setActiveNoteIdx(-1); 
+                    setHasListened(true); 
+                }, (time - audioCtx.current.currentTime) * 1000);
+            };
+
+            const handleEnterItem = (item) => {
+                setActiveItem(item);
+                setHasListened(false);
+                setView('player');
             };
 
             if (view === 'map') return (
@@ -196,7 +218,7 @@
                             const isLocked = idx > userProgress;
                             const isNext = idx === userProgress;
                             return (
-                                <div key={idx} onClick={() => !isLocked && (setActiveItem(item), setView('player'))}
+                                <div key={idx} onClick={() => !isLocked && handleEnterItem(item)}
                                     className={`baroque-box w-44 h-60 flex flex-col items-center justify-center p-6 transition-all ${isLocked ? 'opacity-30 grayscale cursor-not-allowed' : 'cursor-pointer hover:scale-105'} ${isNext ? 'next-challenge' : 'border-[#3a2b1a]'}`}>
                                     <div className="box-corner corner-tl"></div><div className="box-corner corner-tr"></div>
                                     <div className="box-corner corner-bl"></div><div className="box-corner corner-br"></div>
@@ -231,7 +253,7 @@
                             </div>
                             <div className="flex gap-4">
                                 <button onClick={startPlayback} disabled={isPlaying} className="flex-1 py-5 bg-[#D4AF37] text-black font-bold uppercase tracking-widest hover:brightness-110 disabled:opacity-50">Ouvir Guia</button>
-                                {!isPlaying && <button onClick={() => { if(userProgress === fullCurriculum.indexOf(activeItem)) setUserProgress(p=>p+1); setView('map'); }} className="flex-1 py-5 bg-[#600000] text-[#D4AF37] border border-[#D4AF37] font-bold uppercase tracking-widest hover:bg-[#800000]">Concluir</button>}
+                                {!isPlaying && <button onClick={() => { if(userProgress === fullCurriculum.indexOf(activeItem)) setUserProgress(p=>p+1); setView('map'); }} disabled={!hasListened} className="flex-1 py-5 bg-[#600000] text-[#D4AF37] border border-[#D4AF37] font-bold uppercase tracking-widest hover:bg-[#800000] disabled:opacity-30 disabled:cursor-not-allowed">Concluir</button>}
                             </div>
                         </div>
                         <div className="bg-[#1a0f00] p-10 rounded-full border-2 border-[#D4AF37]/20 shadow-2xl">
@@ -251,4 +273,3 @@
     </script>
 </body>
 </html>
-
