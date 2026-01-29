@@ -1,430 +1,310 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mestre da Flauta - Edição Profissional</title>
-    
-    <!-- Bibliotecas Externas -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="js/songs.js"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <style>
-        :root { --app-height: 100dvh; }
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #0F172A; 
-            color: #F8FAFC; 
-            margin: 0; 
-            overflow: hidden; 
-            min-height: var(--app-height);
-        }
-        #root { height: var(--app-height); }
-        .scroll-container {
-            overflow-y: auto;
-            height: 100%;
-            scrollbar-width: thin;
-            scrollbar-color: #1E293B transparent;
-        }
-        
-        /* Blocos de notas com transição para destaque visual */
-        .note-block { 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            border-width: 2px; 
-            flex-shrink: 0; 
-        }
-        .note-block.active { 
-            transform: scale(1.1); 
-            border-color: #10B981; 
-            background-color: #064E3B; 
-            box-shadow: 0 0 30px rgba(16, 185, 129, 0.5); 
-            color: #34D399;
-            z-index: 10;
-        }
-        
-        .flute-hole { fill: #334155; stroke: #475569; stroke-width: 1.5; transition: fill 0.15s ease; }
-        .flute-hole.closed { fill: #3B82F6; stroke: #DBEAFE; }
-        
-        /* Modais */
-        .modal-overlay {
-            background-color: rgba(2, 6, 23, 0.85);
-            backdrop-filter: blur(8px);
-            animation: fadeIn 0.3s ease;
-        }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        
-        .modal-content {
-            animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 
-        .no-select { user-select: none; -webkit-tap-highlight-color: transparent; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        
-        /* Área de rolagem automática suave */
-        .auto-scroll-area {
-            scroll-behavior: smooth;
+// --- CONFIGURAÇÕES VISUAIS BARROCAS ---
+const THEME = {
+  gold: '#D4AF37',
+  goldLight: '#F1D592',
+  burgundy: '#600000',
+  darkWood: '#1a0f00',
+  parchment: '#f4e4bc',
+  shadow: 'rgba(0,0,0,0.5)'
+};
+
+const FREQS = { 'do_lat': 261.63, 're_lat': 293.66, 'mi_lat': 329.63, 'fa_lat': 349.23, 'sol_lat': 392.00, 'la_lat': 440.00, 'si_lat': 493.88 };
+const LABELS = { 'do_lat': 'Dó', 're_lat': 'Ré', 'mi_lat': 'Mi', 'fa_lat': 'Fá', 'sol_lat': 'Sol', 'la_lat': 'Lá', 'si_lat': 'Si' };
+const FINGERINGS = {
+  'do_lat': [true, true, true, true, true, true, true, true],
+  're_lat': [true, true, true, true, true, true, true, false],
+  'mi_lat': [true, true, true, true, true, true, false, false],
+  'fa_lat': [true, true, true, true, true, false, true, true],
+  'sol_lat': [true, true, true, true, false, false, false, false],
+  'la_lat': [true, true, true, false, false, false, false, false],
+  'si_lat': [true, true, false, false, false, false, false, false]
+};
+
+// --- BIBLIOTECA DE MÚSICAS (Original Reintegrada) ---
+const songLibrary = {
+  nivelDo: [
+    { title: "O Despertar", abc: "C2 C2 C4" },
+    { title: "Sopro Constante", abc: "C C C2 C C C2" }
+  ],
+  nivelRe: [
+    { title: "Dueto em Ré", abc: "C D C D C2 D2" },
+    { title: "Salto Real", abc: "D2 C2 D4" }
+  ],
+  nivelMi: [
+    { title: "Hino à Alegria (Tema)", abc: "E E F G G F E D C C D E E3 D/ D2" },
+    { title: "Valsa Imperial", abc: "E2 D2 C2 E4" }
+  ],
+  nivelFa: [
+    { title: "Brisa do Sena", abc: "F E D C F2 E2" }
+  ],
+  nivelSol: [
+    { title: "Asa Branca (Intro)", abc: "C D E G G E F F" }
+  ],
+  nivelLa: [
+    { title: "Melodia de Versalhes", abc: "A G F E D C A2" }
+  ],
+  nivelSi: [
+    { title: "Escala Real", abc: "C D E F G A B C2" }
+  ]
+};
+
+// --- ICONES ORNAMENTADOS ---
+const OrnateIcon = ({ name, size = 24, className = "" }) => {
+  const icons = {
+    Lock: <path d="M7 11V7a5 5 0 0 1 10 0v4M8 11h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z" />,
+    Play: <path d="m5 3 14 9-14 9V3z" />,
+    Check: <path d="M20 6 9 17l-5-5" />,
+    Music: <><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></>,
+    Scroll: <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>,
+    Trophy: <><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></>
+  };
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      {icons[name]}
+    </svg>
+  );
+};
+
+export default function App() {
+  const [userProgress, setUserProgress] = useState(0);
+  const [view, setView] = useState('map');
+  const [activeItem, setActiveItem] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [activeNoteIdx, setActiveNoteIdx] = useState(-1);
+  const [audioReady, setAudioReady] = useState(false);
+  const [hasListened, setHasListened] = useState(false);
+  
+  const audioCtx = useRef(null);
+  const scrollRef = useRef(null);
+
+  // --- TRADUTOR ABC (Original) ---
+  const parseABC = (abcString) => {
+    const notesMap = {
+      'C': 'do_lat', 'D': 're_lat', 'E': 'mi_lat', 'F': 'fa_lat', 
+      'G': 'sol_lat', 'A': 'la_lat', 'B': 'si_lat'
+    };
+    const regex = /([CDEFGAB])([\d/]*)/g;
+    const sequence = [];
+    let match;
+    while ((match = regex.exec(abcString)) !== null) {
+      let noteLetter = match[1];
+      let modifier = match[2];
+      let duration = 1;
+      if (modifier.includes('2')) duration = 2;
+      else if (modifier.includes('3')) duration = 3;
+      else if (modifier.includes('4')) duration = 4;
+      else if (modifier.includes('/')) duration = 0.5;
+      if (notesMap[noteLetter]) sequence.push({ n: notesMap[noteLetter], d: duration });
+    }
+    return sequence;
+  };
+
+  // --- GERADOR DE CURRÍCULO COM MÚSICAS REAIS ---
+  const fullCurriculum = useMemo(() => {
+    const levelConfigs = [
+      { id: 'nivelDo', name: "Dó", notes: ["do_lat"], dur: [1, 2] },
+      { id: 'nivelRe', name: "Ré", notes: ["do_lat", "re_lat"], dur: [1, 2] },
+      { id: 'nivelMi', name: "Mi", notes: ["do_lat", "re_lat", "mi_lat"], dur: [1, 2] },
+      { id: 'nivelFa', name: "Fá", notes: ["do_lat", "re_lat", "mi_lat", "fa_lat"], dur: [1, 0.5] },
+      { id: 'nivelSol', name: "Sol", notes: ["do_lat", "re_lat", "mi_lat", "fa_lat", "sol_lat"], dur: [1, 0.5] },
+      { id: 'nivelLa', name: "Lá", notes: ["do_lat", "re_lat", "mi_lat", "fa_lat", "sol_lat", "la_lat"], dur: [1, 2] },
+      { id: 'nivelSi', name: "Si", notes: ["do_lat", "re_lat", "mi_lat", "fa_lat", "sol_lat", "la_lat", "si_lat"], dur: [1, 0.5, 2] }
+    ];
+
+    const trail = [];
+    levelConfigs.forEach((lvl) => {
+      // 1. Adiciona as 18 lições de treino
+      for (let i = 1; i <= 18; i++) {
+        const sequence = [];
+        const len = 4 + (i % 3);
+        for (let j = 0; j < len; j++) {
+          sequence.push({
+            n: lvl.notes[Math.floor(Math.random() * lvl.notes.length)],
+            d: lvl.dur[Math.floor(Math.random() * lvl.dur.length)]
+          });
         }
-    </style>
-</head>
-<body>
-    <div id="root"></div>
+        trail.push({
+          type: 'lesson',
+          levelName: lvl.name,
+          title: `Treino ${i}: ${lvl.name}`,
+          sequence
+        });
+      }
+      
+      // 2. Adiciona as músicas REAIS da biblioteca para este nível
+      const songs = songLibrary[lvl.id] || [];
+      songs.forEach(song => {
+        trail.push({
+          type: 'song',
+          levelName: lvl.name,
+          title: `Recital: ${song.title}`,
+          sequence: parseABC(song.abc)
+        });
+      });
+    });
+    return trail;
+  }, []);
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef, useMemo } = React;
+  const initAudio = () => {
+    if (!audioCtx.current) {
+      audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+      setAudioReady(true);
+    }
+  };
 
-        const Icon = ({ name, size = 24, className = "", fill = "none" }) => {
-            const icons = {
-                Play: <polygon points="5 3 19 12 5 21 5 3" fill={fill === "currentColor" ? "currentColor" : fill} />,
-                X: <><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></>,
-                ChevronRight: <polyline points="9 18 15 12 9 6"></polyline>,
-                Music: <><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></>,
-                BookOpen: <><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></>,
-                Award: <><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></>,
-                ArrowLeft: <><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></>,
-                RotateCcw: <><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></>,
-                CheckCircle2: <><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></>,
-                Volume2: <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></>,
-                Mic2: <><path d="m12 8-9.04 9.06a2.82 2.82 0 1 0 3.98 3.98L16 12"></path><circle cx="17" cy="7" r="5"></circle></>,
-                Info: <><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></>,
-                ThumbsUp: <><path d="M7 10v12"></path><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"></path></>
-            };
+  const playNote = (note, duration, startTime) => {
+    if (!note || !FREQS[note]) return;
+    const osc = audioCtx.current.createOscillator();
+    const gain = audioCtx.current.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(FREQS[note], startTime);
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(0.12, startTime + 0.08);
+    gain.gain.setValueAtTime(0.12, startTime + duration - 0.1);
+    gain.gain.linearRampToValueAtTime(0, startTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.current.destination);
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  };
 
-            return (
-                <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    width={size} 
-                    height={size} 
-                    viewBox="0 0 24 24" 
-                    fill={fill === "currentColor" ? "currentColor" : "none"} 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    className={className}
-                >
-                    {icons[name]}
+  const handleStartPlayback = () => {
+    if (!audioReady) initAudio();
+    if (isPlaying || !activeItem) return;
+    setIsPlaying(true);
+    setHasListened(false);
+    let scheduleTime = audioCtx.current.currentTime + 0.3;
+    activeItem.sequence.forEach((item, idx) => {
+      const dur = item.d * 0.8;
+      playNote(item.n, dur, scheduleTime);
+      setTimeout(() => setActiveNoteIdx(idx), (scheduleTime - audioCtx.current.currentTime) * 1000);
+      scheduleTime += dur;
+    });
+    setTimeout(() => {
+      setIsPlaying(false);
+      setActiveNoteIdx(-1);
+      setHasListened(true);
+    }, (scheduleTime - audioCtx.current.currentTime) * 1000);
+  };
+
+  const handleComplete = () => {
+    const currentIndex = fullCurriculum.indexOf(activeItem);
+    if (userProgress === currentIndex) setUserProgress(prev => prev + 1);
+    setHasListened(false);
+    setView('map');
+  };
+
+  // --- VIEW: MAPA ---
+  if (view === 'map') return (
+    <div className="min-h-screen bg-[#1a0f00] text-[#f4e4bc] p-6 md:p-12 overflow-x-hidden font-serif">
+      <header className="text-center mb-16">
+        <h1 className="text-5xl md:text-7xl font-black text-[#D4AF37] uppercase tracking-tighter mb-2" style={{ fontFamily: 'Cinzel, serif' }}>
+          Academia Imperial
+        </h1>
+        <div className="h-1 w-64 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent mx-auto opacity-40"></div>
+        <p className="mt-4 text-[#B8860B] uppercase tracking-[0.4em] text-xs">A Arte de Soprar com Nobreza</p>
+      </header>
+
+      <div className="flex flex-wrap justify-center gap-6 max-w-7xl mx-auto pb-32">
+        {fullCurriculum.map((item, idx) => {
+          const isUnlocked = idx <= userProgress;
+          const isCompleted = idx < userProgress;
+          const isNext = idx === userProgress;
+          return (
+            <div key={idx} onClick={() => isUnlocked && (setActiveItem(item), setView('player'))}
+              className={`relative w-40 h-52 md:w-48 md:h-60 group flex flex-col items-center justify-center border-2 transition-all duration-500 rounded-sm
+                ${isUnlocked ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-not-allowed opacity-30 grayscale'}
+                ${isNext ? 'border-[#D4AF37] bg-[#2a1b0a] shadow-[0_0_30px_rgba(212,175,55,0.3)]' : 'border-[#3a2b1a] bg-[#1a0f00]'}
+              `}>
+              <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-[#D4AF37]/40"></div>
+              <div className="p-4 rounded-full mb-3 border border-[#D4AF37]/20">
+                <OrnateIcon name={!isUnlocked ? 'Lock' : (item.type === 'lesson' ? 'Scroll' : 'Music')} size={32} className={isNext ? 'text-[#D4AF37] animate-pulse' : 'text-[#B8860B]'} />
+              </div>
+              <div className="px-2 text-center">
+                <h4 className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest">{item.title}</h4>
+                <p className="text-[9px] text-[#800000] mt-1 italic">{item.levelName}</p>
+              </div>
+              {isCompleted && <div className="absolute -top-3 -right-3 bg-[#D4AF37] text-black rounded-full p-1 shadow-lg"><OrnateIcon name="Check" size={14} /></div>}
+            </div>
+          );
+        })}
+      </div>
+
+      <footer className="fixed bottom-0 left-0 right-0 p-5 bg-black/90 backdrop-blur-md border-t border-[#D4AF37]/30 flex justify-between items-center z-50">
+         <div className="px-4">
+           <p className="text-[9px] uppercase text-[#B8860B] tracking-widest">Maestria Alcançada</p>
+           <p className="text-sm font-bold text-[#D4AF37]">{userProgress} Estações</p>
+         </div>
+         <div className="h-2 flex-1 mx-8 bg-[#3a2b1a] rounded-full overflow-hidden border border-white/5">
+            <div className="h-full bg-gradient-to-r from-[#800000] to-[#D4AF37] transition-all duration-1000" style={{ width: `${(userProgress / fullCurriculum.length) * 100}%` }}></div>
+         </div>
+      </footer>
+    </div>
+  );
+
+  // --- VIEW: PLAYER ---
+  return (
+    <div className="min-h-screen bg-[#1a0f00] text-[#f4e4bc] p-4 md:p-10 font-serif flex flex-col" style={{ backgroundImage: 'radial-gradient(circle at center, #2a1b0a 0%, #1a0f00 100%)' }}>
+      <div className="max-w-5xl mx-auto w-full flex-1 flex flex-col">
+        <button onClick={() => setView('map')} className="w-fit text-[#D4AF37] mb-8 flex items-center gap-2 uppercase tracking-[0.3em] text-xs font-bold hover:brightness-125 transition-all">
+          ← Sair do Estúdio
+        </button>
+
+        <div className="bg-[#2a1b0a] border-4 border-double border-[#D4AF37] rounded-lg shadow-2xl p-6 md:p-12 relative overflow-hidden flex-1 flex flex-col">
+          <div className="text-center mb-10">
+            <span className="text-[#B8860B] text-[10px] uppercase tracking-[0.5em] block mb-2">{activeItem.levelName}</span>
+            <h2 className="text-3xl md:text-5xl font-black text-white uppercase" style={{ fontFamily: 'Cinzel, serif' }}>{activeItem.title}</h2>
+          </div>
+
+          <div className="flex-1 flex flex-col lg:flex-row gap-12 items-center justify-center">
+            <div className="flex-1 w-full space-y-8">
+              <div className="bg-[#1a0f00]/80 p-6 rounded border border-[#D4AF37]/20 flex flex-wrap justify-center gap-2 overflow-y-auto max-h-64 no-scrollbar">
+                {activeItem.sequence.map((step, i) => (
+                  <div key={i} className={`w-14 h-20 border-2 flex flex-col items-center justify-center transition-all duration-300
+                      ${activeNoteIdx === i ? 'bg-[#D4AF37] border-white scale-110 text-black' : 'bg-[#2a1b0a] border-[#D4AF37]/40 text-[#D4AF37]'}
+                    `} style={{ minWidth: step.d >= 2 ? '100px' : '60px' }}>
+                    <span className="text-xl font-black">{LABELS[step.n]?.toUpperCase()}</span>
+                    <span className="text-[9px] opacity-60 uppercase">{step.d}t</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-4 max-w-sm mx-auto">
+                <button onClick={handleStartPlayback} disabled={isPlaying}
+                  className={`w-full py-5 font-bold text-lg uppercase tracking-widest transition-all border-b-4
+                    ${isPlaying ? 'bg-gray-800 border-gray-900 text-gray-600' : 'bg-[#D4AF37] text-black border-[#800000] hover:brightness-110 active:translate-y-1 active:border-b-0'}
+                  `}>
+                  {isPlaying ? 'Escute a Corte...' : 'Ouvir Guia'}
+                </button>
+                {hasListened && !isPlaying && (
+                  <button onClick={handleComplete} className="w-full py-5 bg-[#800000] text-[#D4AF37] border-2 border-[#D4AF37] font-bold text-lg uppercase tracking-widest hover:bg-[#a00000]">
+                    Concluir Atividade
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-[#1a0f00] p-10 rounded-full border-2 border-[#D4AF37]/30 shadow-2xl">
+                <svg viewBox="0 0 100 240" className="w-[120px] md:w-[150px] h-auto">
+                  <rect x="35" y="0" width="30" height="240" rx="15" fill="#3a1a00" stroke="#D4AF37" strokeWidth="1" />
+                  <circle className={`transition-all duration-200 ${activeNoteIdx >= 0 && FINGERINGS[activeItem.sequence[activeNoteIdx].n][0] ? 'fill-[#D4AF37]' : 'fill-[#1a0f00]'}`} cx="85" cy="40" r="10" stroke="#D4AF37" strokeWidth="0.5" />
+                  {[1,2,3,4,5,6,7].map(h => (
+                    <circle key={h} className={`transition-all duration-200 ${activeNoteIdx >= 0 && FINGERINGS[activeItem.sequence[activeNoteIdx].n][h] ? 'fill-[#D4AF37]' : 'fill-[#1a0f00]'}`} cx="50" cy={30 + (h * 26)} r="10" stroke="#D4AF37" strokeWidth="0.5" />
+                  ))}
                 </svg>
-            );
-        };
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+        body { background-color: #1a0f00; margin: 0; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+      `}</style>
+    </div>
+  );
+}
 
-        const FREQS = { 'do_lat': 261.63, 're_lat': 293.66, 'mi_lat': 329.63, 'fa_lat': 349.23, 'sol_lat': 392.00, 'la_lat': 440.00, 'si_lat': 493.88 };
-        const LABELS = { 'do_lat': 'Dó', 're_lat': 'Ré', 'mi_lat': 'Mi', 'fa_lat': 'Fá', 'sol_lat': 'Sol', 'la_lat': 'Lá', 'si_lat': 'Si' };
-        const FINGERINGS = {
-            'do_lat': [true, true, true, true, true, true, true, true],
-            're_lat': [true, true, true, true, true, true, true, false],
-            'mi_lat': [true, true, true, true, true, true, false, false],
-            'fa_lat': [true, true, true, true, true, false, true, true],
-            'sol_lat': [true, true, true, true, false, false, false, false],
-            'la_lat': [true, true, true, false, false, false, false, false],
-            'si_lat': [true, true, false, false, false, false, false, false]
-        };
-
-        const Modal = ({ isOpen, onClose, title, iconName, children }) => {
-            if (!isOpen) return null;
-            return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
-                    <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-[2.5rem] overflow-hidden modal-content shadow-2xl">
-                        <div className="flex justify-between items-center p-6 border-b border-slate-800 bg-slate-900/50">
-                            <h3 className="text-xl font-bold flex items-center gap-3 text-white">
-                                {iconName && <Icon name={iconName} className="text-emerald-400" size={24} />}
-                                {title}
-                            </h3>
-                            <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-400">
-                                <Icon name="X" size={24} />
-                            </button>
-                        </div>
-                        <div className="p-8 scroll-container max-h-[75dvh]">
-                            {children}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const App = () => {
-            const [view, setView] = useState('menu'); 
-            const [levelIdx, setLevelIdx] = useState(0);
-            const [exerciseIdx, setExerciseIdx] = useState(0);
-            const [isPlaying, setIsPlaying] = useState(false);
-            const [activeNoteIdx, setActiveNoteIdx] = useState(-1);
-            const [audioReady, setAudioReady] = useState(false);
-            
-            const [hasListened, setHasListened] = useState(false);
-            const [showGuide, setShowGuide] = useState(false);
-            const [lessonComplete, setLessonComplete] = useState(false);
-
-            const [customSequence, setCustomSequence] = useState(null);
-            const [currentSongTitle, setCurrentSongTitle] = useState("");
-
-            const audioCtx = useRef(null);
-            const scrollRef = useRef(null); // Ref para o contêiner de notas
-
-            // Tradutor ABC robusto para letras maiúsculas e minúsculas
-            const parseABC = (abcString) => {
-                const notesMap = {
-                    'C': 'do_lat', 'D': 're_lat', 'E': 'mi_lat', 'F': 'fa_lat', 
-                    'G': 'sol_lat', 'A': 'la_lat', 'B': 'si_lat',
-                    'c': 'do_lat', 'd': 're_lat', 'e': 'mi_lat', 'f': 'fa_lat',
-                    'g': 'sol_lat', 'a': 'la_lat', 'b': 'si_lat'
-                };
-                
-                let notesPart = abcString;
-                if (abcString.includes('K:')) {
-                    notesPart = abcString.split(/K:[\w\s]*/)[1] || "";
-                }
-                
-                const regex = /([CDEFGABcdefgab])([\d/]*)/g;
-                const sequence = [];
-                let match;
-                while ((match = regex.exec(notesPart)) !== null) {
-                    let noteLetter = match[1];
-                    let modifier = match[2];
-                    let duration = 1;
-                    if (modifier.includes('2')) duration = 2;
-                    else if (modifier.includes('3')) duration = 3;
-                    else if (modifier.includes('4')) duration = 4;
-                    else if (modifier.includes('/')) duration = 0.5;
-                    
-                    if (notesMap[noteLetter]) sequence.push({ n: notesMap[noteLetter], d: duration });
-                }
-                return sequence;
-            };
-
-            const curriculum = useMemo(() => {
-                const baseLevels = [
-                    { id: 1, name: "Nível Dó", notes: ["do_lat"], dur: ["q", "h"], goal: "Embocadura firme e sopro contínuo no Dó grave." },
-                    { id: 2, name: "Nível Ré", notes: ["do_lat", "re_lat"], dur: ["q", "h"], goal: "Coordenação básica do dedo anelar e transição suave." },
-                    { id: 3, name: "Nível Mi", notes: ["do_lat", "re_lat", "mi_lat"], dur: ["q", "h"], goal: "Leitura de saltos entre as três notas iniciais." },
-                    { id: 4, name: "Nível Fá", notes: ["do_lat", "re_lat", "mi_lat", "fa_lat"], dur: ["q", "8"], goal: "Introdução da colcheia e ritmo sincopado simples." },
-                    { id: 5, name: "Nível Sol", notes: ["do_lat", "re_lat", "mi_lat", "fa_lat", "sol_lat"], dur: ["q", "8"], goal: "Domínio da mão esquerda e agilidade melódica." },
-                    { id: 6, name: "Nível Lá", notes: ["do_lat", "re_lat", "mi_lat", "fa_lat", "sol_lat", "la_lat"], dur: ["q", "h"], goal: "Exercícios de fôlego e notas longas de apoio." },
-                    { id: 7, name: "Nível Si", notes: ["do_lat", "re_lat", "mi_lat", "fa_lat", "sol_lat", "la_lat", "si_lat"], dur: ["q", "h", "8"], goal: "Escala diatônica completa de Dó Maior." }
-                ];
-                return baseLevels.map(lvl => {
-                    const exList = [];
-                    for (let i = 1; i <= 18; i++) {
-                        const sequence = [];
-                        const len = 4 + (i % 4);
-                        for (let j = 0; j < len; j++) {
-                            const isRest = j === len - 1 ? false : Math.random() < 0.1;
-                            sequence.push({
-                                n: isRest ? null : lvl.notes[Math.floor(Math.random() * lvl.notes.length)],
-                                d: lvl.dur[Math.floor(Math.random() * lvl.dur.length)] === 'h' ? 2 : (lvl.dur[Math.floor(Math.random() * lvl.dur.length)] === '8' ? 0.5 : 1)
-                            });
-                        }
-                        sequence[sequence.length - 1].n = lvl.notes[0];
-                        sequence[sequence.length - 1].d = 2;
-                        exList.push({ id: `L${lvl.id}-E${i}`, objective: `Exercício ${i}`, sequence });
-                    }
-                    return { ...lvl, exercises: exList };
-                });
-            }, []);
-
-            const currentLevel = curriculum[levelIdx];
-            const currentExercise = customSequence 
-                ? { objective: currentSongTitle, sequence: customSequence } 
-                : currentLevel.exercises[exerciseIdx];
-
-            // Reset de scroll ao mudar de lição
-            useEffect(() => {
-                setHasListened(false);
-                setActiveNoteIdx(-1);
-                if (scrollRef.current) scrollRef.current.scrollLeft = 0;
-            }, [exerciseIdx, levelIdx, customSequence]);
-
-            // Efeito de Scroll Automático para centralizar a nota ativa
-            useEffect(() => {
-                if (activeNoteIdx >= 0 && scrollRef.current) {
-                    const container = scrollRef.current;
-                    const activeElement = container.children[activeNoteIdx];
-                    if (activeElement) {
-                        const targetX = activeElement.offsetLeft - (container.offsetWidth / 2) + (activeElement.offsetWidth / 2);
-                        container.scrollTo({ left: targetX, behavior: 'smooth' });
-                    }
-                }
-            }, [activeNoteIdx]);
-
-            const initAudio = () => {
-                if (!audioCtx.current) {
-                    audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
-                    setAudioReady(true);
-                }
-            };
-
-            const playNote = (note, duration, startTime) => {
-                if (!note || !FREQS[note]) return;
-                const osc = audioCtx.current.createOscillator();
-                const gain = audioCtx.current.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(FREQS[note], startTime);
-                gain.gain.setValueAtTime(0, startTime);
-                gain.gain.linearRampToValueAtTime(0.15, startTime + 0.04);
-                gain.gain.setValueAtTime(0.15, startTime + duration - 0.05);
-                gain.gain.linearRampToValueAtTime(0, startTime + duration);
-                osc.connect(gain);
-                gain.connect(audioCtx.current.destination);
-                osc.start(startTime);
-                osc.stop(startTime + duration);
-            };
-
-            const startExercise = async () => {
-                if (!audioReady) initAudio();
-                if (isPlaying) return;
-                
-                if (scrollRef.current) scrollRef.current.scrollLeft = 0;
-                
-                setIsPlaying(true);
-                const beatUnit = 0.85; 
-                let scheduleTime = audioCtx.current.currentTime + 0.2;
-                currentExercise.sequence.forEach((item, idx) => {
-                    const dur = item.d * beatUnit;
-                    if (item.n) playNote(item.n, dur, scheduleTime);
-                    setTimeout(() => setActiveNoteIdx(idx), (scheduleTime - audioCtx.current.currentTime) * 1000);
-                    scheduleTime += dur;
-                });
-                setTimeout(() => {
-                    setIsPlaying(false);
-                    setActiveNoteIdx(-1);
-                    setHasListened(true);
-                }, (scheduleTime - audioCtx.current.currentTime) * 1000);
-            };
-
-            const nextLesson = () => {
-                setLessonComplete(false);
-                if (customSequence) { setCustomSequence(null); setView('menu'); return; }
-                if (exerciseIdx < currentLevel.exercises.length - 1) setExerciseIdx(prev => prev + 1);
-                else if (levelIdx < curriculum.length - 1) { setLevelIdx(prev => prev + 1); setExerciseIdx(0); }
-                else setView('menu');
-            };
-
-            const renderSongList = () => {
-                const keys = ['nivelDo', 'nivelRe', 'nivelMi', 'nivelFa', 'nivelSol', 'nivelLa', 'nivelSi'];
-                const currentSongs = (typeof songLibrary !== 'undefined') ? songLibrary[keys[levelIdx]] || [] : [];
-                return (
-                    <div className="flex flex-col h-full p-6 md:p-16 no-select max-w-4xl mx-auto">
-                        <button onClick={() => setView('menu')} className="mb-8 flex items-center gap-2 text-slate-400 font-bold hover:text-white transition-colors">
-                            <Icon name="ArrowLeft" size={20} /> Voltar ao Menu
-                        </button>
-                        <h2 className="text-4xl font-black text-emerald-500 uppercase mb-8">Estudos do Nível</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto no-scrollbar pb-20">
-                            {currentSongs.map((song, idx) => (
-                                <button key={idx} onClick={() => { setCustomSequence(parseABC(song.abc)); setCurrentSongTitle(song.title); setView('player'); }}
-                                    className="p-6 bg-slate-900 border border-slate-800 rounded-[2rem] hover:border-emerald-500 transition-all text-left flex items-center justify-between group">
-                                    <h4 className="font-black text-white">{song.title}</h4>
-                                    <Icon name="Play" size={18} fill="currentColor" className="text-emerald-500" />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                );
-            };
-
-            if (view === 'menu') return (
-                <div className="scroll-container p-6 md:p-16">
-                    <div className="max-w-6xl mx-auto">
-                        <h1 className="text-6xl font-black text-emerald-500 mb-16 tracking-tighter uppercase">Mestre da Flauta</h1>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-32">
-                            {curriculum.map((lvl, i) => (
-                                <div key={lvl.id} className="bg-slate-900 rounded-[3rem] p-8 border border-slate-800 hover:border-emerald-500 transition-all flex flex-col group shadow-2xl">
-                                    <h3 className="font-extrabold text-3xl text-white mb-6 uppercase tracking-tight">{lvl.name}</h3>
-                                    <button onClick={() => { setLevelIdx(i); setExerciseIdx(0); setCustomSequence(null); setView('player'); }}
-                                        className="w-full bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black py-5 rounded-2xl transition-all flex items-center justify-center gap-2 mb-3">
-                                        INICIAR TREINO <Icon name="ChevronRight" size={20} />
-                                    </button>
-                                    <button onClick={() => { setLevelIdx(i); setView('songs'); }}
-                                        className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-700">
-                                        <Icon name="Music" size={18} /> ESTUDOS DO NÍVEL
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            );
-
-            if (view === 'songs') return renderSongList();
-
-            return (
-                <div className="h-full flex flex-col p-4 md:p-12 no-select bg-slate-950 overflow-hidden">
-                    <div className="max-w-6xl mx-auto w-full flex flex-col h-full">
-                        <div className="flex items-center gap-8 py-4 mb-8">
-                            <button onClick={() => { setCustomSequence(null); setView('menu'); }} className="p-4 bg-slate-900 rounded-[1.5rem] text-slate-500 hover:text-white transition-all shadow-xl border border-slate-800">
-                                <Icon name="ArrowLeft" size={24} />
-                            </button>
-                            <div className="flex-1">
-                                <h2 className="text-2xl font-black text-white truncate">{currentExercise.objective}</h2>
-                                <p className="text-xs text-emerald-500 font-bold uppercase tracking-widest">{currentLevel.name}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 flex flex-col lg:flex-row gap-12 items-center justify-center min-h-0">
-                            <div className="flex-1 w-full flex flex-col justify-center gap-12 min-h-0">
-                                {/* ÁREA DE NOTAS COM SCROLL AUTOMÁTICO */}
-                                <div 
-                                    ref={scrollRef}
-                                    className="auto-scroll-area w-full flex items-center gap-3 overflow-x-auto no-scrollbar py-14 px-4 bg-slate-900/20 rounded-[3rem] border border-slate-800/30"
-                                >
-                                    {currentExercise.sequence.map((step, i) => (
-                                        <div key={i} className={`note-block rounded-[1.5rem] flex items-center justify-center font-black text-sm
-                                            ${step.n ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-transparent opacity-10'}
-                                            ${activeNoteIdx === i ? 'active' : ''}`}
-                                            style={{ minWidth: `${step.d * 90}px`, height: '90px' }}>
-                                            {step.n && LABELS[step.n].toUpperCase()}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="flex flex-col gap-4 max-w-sm mx-auto lg:mx-0">
-                                    {!isPlaying ? (
-                                        <button onClick={startExercise} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-black py-6 rounded-[2rem] text-xl border border-slate-700 shadow-xl transition-all">
-                                            <Icon name="Volume2" size={28} className="inline mr-2" /> OUVIR REFERÊNCIA
-                                        </button>
-                                    ) : (
-                                        <div className="w-full py-6 text-center font-black text-emerald-500 bg-emerald-500/5 rounded-[2rem] animate-pulse border border-emerald-500/20 uppercase tracking-widest">Escutando...</div>
-                                    )}
-                                    {hasListened && !isPlaying && (
-                                        <button onClick={() => setLessonComplete(true)} className="w-full bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black py-7 rounded-[2rem] text-2xl shadow-[0_8px_0_#059669] active:translate-y-1 transition-all">
-                                            <Icon name="ThumbsUp" size={32} fill="currentColor" className="inline mr-2" /> ESTOU PRONTO
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="w-full lg:w-auto flex justify-center py-4 flex-shrink-0">
-                                <div className="bg-slate-900/80 p-10 lg:p-16 rounded-[6rem] border border-slate-800 shadow-2xl relative">
-                                    <svg viewBox="0 0 100 240" className="w-[110px] lg:w-[150px] h-auto">
-                                        <rect x="35" y="0" width="30" height="240" rx="15" fill="#1E293B" />
-                                        <circle className={`flute-hole ${activeNoteIdx >= 0 && currentExercise.sequence[activeNoteIdx].n && FINGERINGS[currentExercise.sequence[activeNoteIdx].n][0] ? 'closed' : ''}`} cx="85" cy="40" r="10" />
-                                        {[1,2,3,4,5,6,7].map(h => (
-                                            <circle key={h} className={`flute-hole ${activeNoteIdx >= 0 && currentExercise.sequence[activeNoteIdx].n && FINGERINGS[currentExercise.sequence[activeNoteIdx].n][h] ? 'closed' : ''}`} cx="50" cy={30 + (h * 26)} r="10" />
-                                        ))}
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <Modal isOpen={lessonComplete} onClose={() => setLessonComplete(false)} title="Concluído!" iconName="Trophy">
-                        <div className="text-center py-6">
-                            <Icon name="CheckCircle2" size={80} className="text-emerald-400 mx-auto mb-8" />
-                            <p className="text-slate-400 mb-12 px-6">Excelente! Você completou este desafio técnico com sucesso.</p>
-                            <button onClick={nextLesson} className="w-full bg-emerald-500 text-emerald-950 font-black py-5 rounded-[1.5rem] shadow-xl text-lg">
-                                {customSequence ? "VOLTAR AO MENU" : "PRÓXIMO DESAFIO"}
-                            </button>
-                        </div>
-                    </Modal>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
