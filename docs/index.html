@@ -3,62 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Academia Real de Flauta - Edição Barroca</title>
+    <title>Academia Real de Flauta - Edição Imperial</title>
     
-    <!-- Bibliotecas Necessárias -->
+    <!-- Bibliotecas -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Fontes Barrocas -->
+    <!-- Estilo Barroco -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     
     <style>
         :root {
             --gold: #D4AF37;
+            --gold-light: #F1D592;
             --burgundy: #600000;
             --dark-wood: #1a0f00;
+            --parchment: #f4e4bc;
         }
 
         body {
             margin: 0;
             background-color: var(--dark-wood);
-            color: #f4e4bc;
+            color: var(--parchment);
             font-family: 'Playfair Display', serif;
             overflow-x: hidden;
+            background-image: radial-gradient(circle at center, #2a1b0a 0%, #1a0f00 100%);
         }
 
-        .baroque-title {
-            font-family: 'Cinzel', serif;
-            text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+        .baroque-title { font-family: 'Cinzel', serif; text-shadow: 0 4px 10px rgba(0,0,0,0.8); }
+
+        .baroque-box {
+            position: relative;
+            background: #2a1b0a;
+            border: 4px border-double var(--gold);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        .ornate-border {
-            border: 4px double var(--gold);
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        .box-corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--gold);
+            pointer-events: none;
+        }
+        .corner-tl { top: -5px; left: -5px; border-right: 0; border-bottom: 0; }
+        .corner-tr { top: -5px; right: -5px; border-left: 0; border-bottom: 0; }
+        .corner-bl { bottom: -5px; left: -5px; border-right: 0; border-top: 0; }
+        .corner-br { bottom: -5px; right: -5px; border-left: 0; border-top: 0; }
+
+        .next-challenge { animation: pulse-gold 2s infinite; border-color: var(--gold-light) !important; }
+        @keyframes pulse-gold {
+            0%, 100% { box-shadow: 0 0 5px var(--gold); }
+            50% { box-shadow: 0 0 25px var(--gold); }
         }
 
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-
-        .flute-hole {
-            transition: fill 0.2s ease;
-            stroke: var(--gold);
-            stroke-width: 0.5;
-        }
-
-        .flute-hole.active {
-            fill: var(--gold);
-            filter: drop-shadow(0 0 5px var(--gold));
-        }
-
-        /* Animação de desbloqueio */
-        @keyframes unlock {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
+        .flute-hole { transition: fill 0.2s ease; stroke: var(--gold); stroke-width: 0.5; fill: #1a0f00; }
+        .flute-hole.active { fill: var(--gold); filter: drop-shadow(0 0 8px var(--gold)); }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
@@ -67,47 +72,28 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
-        // --- BIBLIOTECA DE MÚSICAS ---
-        const songLibrary = {
-            nivelDo: [
-                { title: "Mary Had a Little Lamb", abc: "e d c d | e e e2 | d d d2 | e g g2 | e d c d | e e e e | d d e d | c4 |" },
-                { title: "Au Clair de la Lune", abc: "c c c d | e2 d2 | c e d d | c4 |" }
-            ],
-            nivelRe: [
-                { title: "The Boys Of Bluehill", abc: "F A | B A F A D2 F A | B A B d e2 d e | f a g f e g f e | d f e d B2 d B |" },
-                { title: "Saint Anne's Reel", abc: "f e d f e d c B | A2 F A D A F A | B2 G B E B G B |" }
-            ],
-            nivelMi: [
-                { title: "The Sally Gardens", abc: "G2 G A B A G B | d B e B d B A B | d2 B d e f g e |" },
-                { title: "Sí Bheag Sí Mhór", abc: "f3 e d2 | d2 d e d2 | B4 A2 | F4 A2 |" }
-            ],
-            nivelFa: [
-                { title: "The Harvest Home", abc: "A F | D A F A D A F A | d e f e d c B A |" }
-            ],
-            nivelSol: [
-                { title: "The Blarney Pilgrim", abc: "D E D D E G | A2 A A B c | B A G A G E |" }
-            ],
-            nivelLa: [
-                { title: "The Banshee", abc: "G2 G D E D E G | A G A B d2 B d | e g e d B A G A |" }
-            ],
-            nivelSi: [
-                { title: "Morrison's Jig", abc: "E3 B3 | E B E A F D | E D E B3 | d c B A F D |" }
-            ]
+        // --- DEFINIÇÕES TÉCNICAS (Frequências e Dedilhados) ---
+        const FREQS = { 
+            'do_lat': 261.63, 're_lat': 293.66, 'mi_lat': 329.63, 'fa_lat': 349.23, 'sol_lat': 392.00, 'la_lat': 440.00, 'si_lat': 493.88,
+            'do2_lat': 523.25, 're2_lat': 587.33
         };
-
-        const FREQS = { 'do_lat': 261.63, 're_lat': 293.66, 'mi_lat': 329.63, 'fa_lat': 349.23, 'sol_lat': 392.00, 'la_lat': 440.00, 'si_lat': 493.88 };
-        const LABELS = { 'do_lat': 'Dó', 're_lat': 'Ré', 'mi_lat': 'Mi', 'fa_lat': 'Fá', 'sol_lat': 'Sol', 'la_lat': 'Lá', 'si_lat': 'Si' };
+        const LABELS = { 
+            'do_lat': 'Dó', 're_lat': 'Ré', 'mi_lat': 'Mi', 'fa_lat': 'Fá', 'sol_lat': 'Sol', 'la_lat': 'Lá', 'si_lat': 'Si',
+            'do2_lat': 'Dó♯', 're2_lat': 'Ré♯' 
+        };
         const FINGERINGS = {
-            'do_lat': [true, true, true, true, true, true, true, true],
-            're_lat': [true, true, true, true, true, true, true, false],
-            'mi_lat': [true, true, true, true, true, true, false, false],
-            'fa_lat': [true, true, true, true, true, false, true, true],
+            'si_lat':  [true, true, false, false, false, false, false, false],
+            'la_lat':  [true, true, true, false, false, false, false, false],
             'sol_lat': [true, true, true, true, false, false, false, false],
-            'la_lat': [true, true, true, false, false, false, false, false],
-            'si_lat': [true, true, false, false, false, false, false, false]
+            'do2_lat': [true, false, true, false, false, false, false, false], // Dó Agudo
+            're2_lat': [false, false, true, false, false, false, false, false], // Ré Agudo
+            'fa_lat':  [true, true, true, true, true, false, true, true],
+            'mi_lat':  [true, true, true, true, true, true, false, false],
+            're_lat':  [true, true, true, true, true, true, true, false],
+            'do_lat':  [true, true, true, true, true, true, true, true]
         };
 
-        const Icon = ({ name, size = 24, className = "" }) => {
+        const OrnateIcon = ({ name, size = 24, className = "" }) => {
             const icons = {
                 Lock: <path d="M7 11V7a5 5 0 0 1 10 0v4M8 11h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z" />,
                 Play: <path d="m5 3 14 9-14 9V3z" />,
@@ -115,11 +101,7 @@
                 Music: <><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></>,
                 Scroll: <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             };
-            return (
-                <svg viewBox="0 0 24 24" width={size} height={size} stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                    {icons[name]}
-                </svg>
-            );
+            return <svg viewBox="0 0 24 24" width={size} height={size} stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" className={className}>{icons[name]}</svg>;
         };
 
         const App = () => {
@@ -128,172 +110,135 @@
             const [activeItem, setActiveItem] = useState(null);
             const [isPlaying, setIsPlaying] = useState(false);
             const [activeNoteIdx, setActiveNoteIdx] = useState(-1);
-            
             const audioCtx = useRef(null);
 
-            // --- TRADUTOR ABC ---
-            const parseABC = (abcString) => {
-                const notesMap = { 'C': 'do_lat', 'D': 're_lat', 'E': 'mi_lat', 'F': 'fa_lat', 'G': 'sol_lat', 'A': 'la_lat', 'B': 'si_lat', 'c': 'do_lat', 'd': 're_lat', 'e': 'mi_lat', 'f': 'fa_lat', 'g': 'sol_lat', 'a': 'la_lat', 'b': 'si_lat' };
-                const regex = /([CDEFGABcdefgab])([\d/]*)/g;
-                const sequence = [];
-                let match;
-                while ((match = regex.exec(abcString)) !== null) {
-                    let duration = 1;
-                    if (match[2].includes('2')) duration = 2;
-                    if (match[2].includes('3')) duration = 3;
-                    if (match[2].includes('4')) duration = 4;
-                    if (match[2].includes('/')) duration = 0.5;
-                    if (notesMap[match[1]]) sequence.push({ n: notesMap[match[1]], d: duration });
+            // --- TRADUTOR ABC MELHORADO ---
+            const parseABC = (abc) => {
+                const map = { 'B': 'si_lat', 'A': 'la_lat', 'G': 'sol_lat', 'c': 'do2_lat', 'd': 're2_lat', 'F': 'fa_lat', 'E': 'mi_lat', 'D': 're_lat', 'C': 'do_lat' };
+                const regex = /([ABCDEFGcdefg])([>]*)([\d/]*)/g;
+                const seq = [];
+                let m;
+                while ((m = regex.exec(abc)) !== null) {
+                    let dur = 1;
+                    if (m[3].includes('2')) dur = 2; else if (m[3].includes('4')) dur = 4; else if (m[3].includes('/')) dur = 0.5;
+                    if (m[2] === ">") dur = 1.5;
+                    if (map[m[1]]) seq.push({ n: map[m[1]], d: dur });
                 }
-                return sequence;
+                return seq;
             };
 
-            // --- CURRÍCULO ---
+            // --- NOVO CURRÍCULO ACUMULATIVO ---
             const fullCurriculum = useMemo(() => {
-                const levels = [
-                    { id: 'nivelDo', name: 'Dó', notes: ['do_lat'] },
-                    { id: 'nivelRe', name: 'Ré', notes: ['do_lat', 're_lat'] },
-                    { id: 'nivelMi', name: 'Mi', notes: ['do_lat', 're_lat', 'mi_lat'] },
-                    { id: 'nivelFa', name: 'Fá', notes: ['do_lat', 're_lat', 'mi_lat', 'fa_lat'] },
-                    { id: 'nivelSol', name: 'Sol', notes: ['do_lat', 're_lat', 'mi_lat', 'fa_lat', 'sol_lat'] },
-                    { id: 'nivelLa', name: 'Lá', notes: ['do_lat', 're_lat', 'mi_lat', 'fa_lat', 'sol_lat', 'la_lat'] },
-                    { id: 'nivelSi', name: 'Si', notes: ['do_lat', 're_lat', 'mi_lat', 'fa_lat', 'sol_lat', 'la_lat', 'si_lat'] }
+                const stages = [
+                    { id: 'si', name: 'Nobre Si', notes: ['si_lat'], songs: [{t: "Sopro do Sino", a: "B2 B2 B4"}] },
+                    { id: 'la', name: 'Lá Imperial', notes: ['si_lat', 'la_lat'], songs: [{t: "Dueto de Prata", a: "B A B2 A2"}] },
+                    { id: 'sol', name: 'Sol de Versalhes', notes: ['si_lat', 'la_lat', 'sol_lat'], songs: [
+                        {t: "Mary Had a Little Lamb", a: "B A G A | B B B2 | A A A2 | B B B2"},
+                        {t: "Au Clair de la Lune", a: "G G G A | B2 A2 | G B A A | G4"}
+                    ]},
+                    { id: 'do2', name: 'Dó das Nuvens', notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat'], songs: [{t: "Escada de Cristal", a: "G A B c c B A G"}] },
+                    { id: 're2', name: 'Ré Majestoso', notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat', 're2_lat'], songs: [
+                        {t: "Ode to Joy", a: "B B c d | d c B A | G G A B | B>A A2"},
+                        {t: "Jingle Bells", a: "B B B2 | B B B2 | B d G A | B4"}
+                    ]},
+                    { id: 'fa_mi', name: 'Descida ao Fá/Mi', notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat', 're2_lat', 'fa_lat', 'mi_lat'], songs: [{t: "Twinkle Twinkle", a: "G G d d | e e d2 | c c B B | A A G2"}] },
+                    { id: 'completo', name: 'A Flauta Completa', notes: ['do_lat', 're_lat', 'mi_lat', 'fa_lat', 'sol_lat', 'la_lat', 'si_lat', 'do2_lat', 're2_lat'], songs: [
+                        {t: "The Kesh Jig", a: "G3 G A B | A3 A B d | e d d g d d | e d B d B A"}
+                    ]}
                 ];
 
                 const trail = [];
-                levels.forEach(lvl => {
-                    // 18 Lições
-                    for (let i = 1; i <= 18; i++) {
-                        trail.push({
-                            type: 'lesson',
-                            title: `Exercício ${i} de ${lvl.name}`,
-                            level: lvl.name,
-                            sequence: Array(4).fill(0).map(() => ({ n: lvl.notes[Math.floor(Math.random() * lvl.notes.length)], d: 1 }))
-                        });
+                stages.forEach(s => {
+                    for (let i = 1; i <= 3; i++) { // Simplificado para 3 exercícios por nota nesta demo
+                        trail.push({ type: 'lesson', title: `Estudo ${i}: ${s.name}`, level: s.name, sequence: Array(4).fill(0).map(() => ({ n: s.notes[Math.floor(Math.random() * s.notes.length)], d: 1 })) });
                     }
-                    // Músicas do Nível
-                    (songLibrary[lvl.id] || []).forEach(song => {
-                        trail.push({ type: 'song', title: song.title, level: lvl.name, sequence: parseABC(song.abc) });
-                    });
+                    s.songs.forEach(song => trail.push({ type: 'song', title: song.t, level: s.name, sequence: parseABC(song.a) }));
                 });
                 return trail;
             }, []);
 
-            const initAudio = () => {
+            const playNote = (note, duration, start) => {
                 if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
-            };
-
-            const playNote = (note, duration, startTime) => {
-                if (!note || !FREQS[note]) return;
                 const osc = audioCtx.current.createOscillator();
                 const gain = audioCtx.current.createGain();
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(FREQS[note], startTime);
-                gain.gain.setValueAtTime(0, startTime);
-                gain.gain.linearRampToValueAtTime(0.1, startTime + 0.05);
-                gain.gain.setValueAtTime(0.1, startTime + duration - 0.05);
-                gain.gain.linearRampToValueAtTime(0, startTime + duration);
-                osc.connect(gain);
-                gain.connect(audioCtx.current.destination);
-                osc.start(startTime);
-                osc.stop(startTime + duration);
+                osc.frequency.setValueAtTime(FREQS[note], start);
+                gain.gain.setValueAtTime(0, start);
+                gain.gain.linearRampToValueAtTime(0.12, start + 0.05);
+                gain.gain.setValueAtTime(0.12, start + duration - 0.05);
+                gain.gain.linearRampToValueAtTime(0, start + duration);
+                osc.connect(gain); gain.connect(audioCtx.current.destination);
+                osc.start(start); osc.stop(start + duration);
             };
 
             const startPlayback = () => {
-                initAudio();
                 if (isPlaying) return;
                 setIsPlaying(true);
-                let scheduleTime = audioCtx.current.currentTime + 0.2;
+                let time = audioCtx.current?.currentTime || 0.2;
+                if (!audioCtx.current) { audioCtx.current = new AudioContext(); time = 0.2; }
                 activeItem.sequence.forEach((item, idx) => {
-                    const dur = item.d * 0.7;
-                    playNote(item.n, dur, scheduleTime);
-                    setTimeout(() => setActiveNoteIdx(idx), (scheduleTime - audioCtx.current.currentTime) * 1000);
-                    scheduleTime += dur;
+                    const d = item.d * 0.7;
+                    playNote(item.n, d, time);
+                    setTimeout(() => setActiveNoteIdx(idx), (time - audioCtx.current.currentTime) * 1000);
+                    time += d;
                 });
-                setTimeout(() => { setIsPlaying(false); setActiveNoteIdx(-1); }, (scheduleTime - audioCtx.current.currentTime) * 1000);
-            };
-
-            const completeActivity = () => {
-                const currentIdx = fullCurriculum.indexOf(activeItem);
-                if (userProgress === currentIdx) setUserProgress(p => p + 1);
-                setView('map');
+                setTimeout(() => { setIsPlaying(false); setActiveNoteIdx(-1); setHasListened(true); }, (time - audioCtx.current.currentTime) * 1000);
             };
 
             if (view === 'map') return (
                 <div className="min-h-screen p-8 flex flex-col items-center">
-                    <h1 className="baroque-title text-4xl md:text-6xl text-[#D4AF37] mb-12 text-center uppercase tracking-widest">
-                        Academia Imperial de Flauta
-                    </h1>
-                    
-                    <div className="flex flex-wrap justify-center gap-6 max-w-6xl pb-24">
+                    <header className="text-center mb-16">
+                        <h1 className="baroque-title text-5xl md:text-7xl text-[#D4AF37] mb-2 uppercase tracking-tighter">Academia Real</h1>
+                        <p className="text-[#B8860B] uppercase tracking-[0.4em] text-[10px] font-bold">Método de Sopro Acumulativo</p>
+                    </header>
+                    <div className="flex flex-wrap justify-center gap-8 max-w-7xl pb-40">
                         {fullCurriculum.map((item, idx) => {
-                            const isUnlocked = idx <= userProgress;
-                            const isCompleted = idx < userProgress;
+                            const isLocked = idx > userProgress;
                             const isNext = idx === userProgress;
-                            
                             return (
-                                <div key={idx} onClick={() => isUnlocked && (setActiveItem(item), setView('player'))}
-                                    className={`relative w-40 h-56 flex flex-col items-center justify-center ornate-border transition-all duration-500
-                                        ${isUnlocked ? 'cursor-pointer hover:scale-105 bg-[#2a1b0a]' : 'opacity-40 grayscale'}
-                                        ${isNext ? 'border-[#D4AF37] shadow-[0_0_20px_#D4AF37]' : 'border-[#3a2b1a]'}
-                                    `}>
-                                    <div className="mb-4">
-                                        <Icon name={!isUnlocked ? 'Lock' : (item.type === 'lesson' ? 'Scroll' : 'Music')} size={32} className="text-[#D4AF37]" />
+                                <div key={idx} onClick={() => !isLocked && (setActiveItem(item), setView('player'))}
+                                    className={`baroque-box w-44 h-60 flex flex-col items-center justify-center p-6 transition-all ${isLocked ? 'opacity-30 grayscale cursor-not-allowed' : 'cursor-pointer hover:scale-105'} ${isNext ? 'next-challenge' : 'border-[#3a2b1a]'}`}>
+                                    <div className="box-corner corner-tl"></div><div className="box-corner corner-tr"></div>
+                                    <div className="box-corner corner-bl"></div><div className="box-corner corner-br"></div>
+                                    <div className={`p-4 rounded-full mb-4 border ${isNext ? 'bg-[#D4AF37]/10 border-[#D4AF37]' : 'border-[#D4AF37]/20'}`}>
+                                        <OrnateIcon name={isLocked ? 'Lock' : (item.type === 'lesson' ? 'Scroll' : 'Music')} size={32} className="text-[#D4AF37]" />
                                     </div>
-                                    <div className="text-center px-2">
-                                        <h4 className="text-[10px] font-bold text-[#D4AF37] uppercase mb-1">{item.title}</h4>
-                                        <p className="text-[8px] italic opacity-60">{item.level}</p>
-                                    </div>
-                                    {isCompleted && <div className="absolute -top-2 -right-2 bg-green-600 rounded-full p-1"><Icon name="Check" size={12} className="text-white" /></div>}
+                                    <h4 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">{item.title}</h4>
+                                    <p className="text-[8px] text-[#800000] mt-2 italic">{item.level}</p>
+                                    {idx < userProgress && <div className="absolute -top-2 -right-2 bg-[#D4AF37] text-black rounded-full p-1 shadow-lg"><OrnateIcon name="Check" size={14} /></div>}
                                 </div>
                             );
                         })}
-                    </div>
-
-                    <div className="fixed bottom-0 left-0 right-0 bg-black/80 border-t border-[#D4AF37]/30 p-4 text-center text-[#D4AF37] text-xs uppercase tracking-widest">
-                        Progresso Imperial: {userProgress} / {fullCurriculum.length} Desafios
                     </div>
                 </div>
             );
 
             return (
-                <div className="min-h-screen p-4 md:p-12 flex flex-col items-center">
-                    <button onClick={() => setView('map')} className="self-start text-[#D4AF37] uppercase text-xs font-bold mb-8 hover:opacity-70">← Voltar</button>
-                    
-                    <div className="w-full max-w-5xl bg-[#2a1b0a] ornate-border p-8 md:p-12 flex flex-col lg:flex-row items-center gap-12">
-                        <div className="flex-1 w-full text-center lg:text-left">
-                            <span className="text-[#D4AF37] text-[10px] tracking-[0.4em] uppercase">{activeItem.level}</span>
-                            <h2 className="baroque-title text-3xl md:text-5xl text-white mt-2 mb-8 uppercase">{activeItem.title}</h2>
-                            
-                            <div className="bg-black/40 p-6 rounded border border-[#D4AF37]/20 flex flex-wrap justify-center lg:justify-start gap-3 mb-8 no-scrollbar overflow-x-auto">
-                                {activeItem.sequence.map((step, i) => (
-                                    <div key={i} className={`w-12 h-16 md:w-16 md:h-20 border flex flex-col items-center justify-center transition-all duration-300
-                                        ${activeNoteIdx === i ? 'bg-[#D4AF37] text-black border-white scale-110 shadow-lg' : 'bg-[#1a0f00] border-[#D4AF37]/40 text-[#D4AF37]'}
-                                    `} style={{ minWidth: step.d >= 2 ? '100px' : '60px' }}>
-                                        <span className="text-lg font-black">{LABELS[step.n]?.toUpperCase()}</span>
+                <div className="min-h-screen p-4 md:p-10 flex flex-col items-center">
+                    <button onClick={() => setView('map')} className="self-start text-[#D4AF37] uppercase text-[10px] font-bold tracking-[0.3em] mb-10">← Voltar</button>
+                    <div className="w-full max-w-5xl bg-[#2a1b0a] border-4 border-double border-[#D4AF37]/40 rounded-lg shadow-2xl p-8 md:p-12 flex flex-col lg:flex-row items-center gap-12">
+                        <div className="flex-1 w-full space-y-8">
+                            <div className="text-center lg:text-left">
+                                <span className="text-[#B8860B] text-[10px] uppercase tracking-[0.5em]">{activeItem.level}</span>
+                                <h2 className="baroque-title text-3xl md:text-5xl text-white uppercase">{activeItem.title}</h2>
+                            </div>
+                            <div className="bg-black/40 p-6 rounded border border-[#D4AF37]/10 flex flex-wrap justify-center lg:justify-start gap-2 max-h-60 overflow-y-auto no-scrollbar">
+                                {activeItem.sequence.map((s, i) => (
+                                    <div key={i} className={`w-12 h-18 border flex flex-col items-center justify-center transition-all ${activeNoteIdx === i ? 'bg-[#D4AF37] text-black scale-110 shadow-lg' : 'bg-[#1a0f00] border-[#D4AF37]/20 text-[#D4AF37]'}`} style={{ minWidth: s.d >= 2 ? '90px' : '50px' }}>
+                                        <span className="text-lg font-black">{LABELS[s.n]?.toUpperCase()}</span>
                                     </div>
                                 ))}
                             </div>
-
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <button onClick={startPlayback} disabled={isPlaying} className="flex-1 py-4 bg-[#D4AF37] text-black font-bold uppercase tracking-widest hover:brightness-110 disabled:opacity-50">
-                                    {isPlaying ? 'Escutando...' : 'Ouvir Guia'}
-                                </button>
-                                {!isPlaying && (
-                                    <button onClick={completeActivity} className="flex-1 py-4 bg-[#600000] text-[#D4AF37] border border-[#D4AF37] font-bold uppercase tracking-widest hover:bg-[#800000]">
-                                        Concluir
-                                    </button>
-                                )}
+                            <div className="flex gap-4">
+                                <button onClick={startPlayback} disabled={isPlaying} className="flex-1 py-5 bg-[#D4AF37] text-black font-bold uppercase tracking-widest hover:brightness-110 disabled:opacity-50">Ouvir Guia</button>
+                                {!isPlaying && <button onClick={() => { if(userProgress === fullCurriculum.indexOf(activeItem)) setUserProgress(p=>p+1); setView('map'); }} className="flex-1 py-5 bg-[#600000] text-[#D4AF37] border border-[#D4AF37] font-bold uppercase tracking-widest hover:bg-[#800000]">Concluir</button>}
                             </div>
                         </div>
-
-                        <div className="bg-[#1a0f00] p-10 rounded-full border-2 border-[#D4AF37]/20">
-                            <svg viewBox="0 0 100 240" className="w-[120px] md:w-[160px] h-auto">
-                                <rect x="35" y="0" width="30" height="240" rx="15" fill="#3a1a00" stroke="#D4AF37" strokeWidth="0.5" />
+                        <div className="bg-[#1a0f00] p-10 rounded-full border-2 border-[#D4AF37]/20 shadow-2xl">
+                            <svg viewBox="0 0 100 240" className="w-[120px] md:w-[150px] h-auto">
+                                <rect x="38" y="0" width="24" height="240" rx="12" fill="#3a1a00" stroke="#D4AF37" strokeWidth="0.5" />
                                 <circle className={`flute-hole ${activeNoteIdx >= 0 && FINGERINGS[activeItem.sequence[activeNoteIdx].n][0] ? 'active' : ''}`} cx="85" cy="40" r="10" />
-                                {[1,2,3,4,5,6,7].map(h => (
-                                    <circle key={h} className={`flute-hole ${activeNoteIdx >= 0 && FINGERINGS[activeItem.sequence[activeNoteIdx].n][h] ? 'active' : ''}`} cx="50" cy={30 + (h * 26)} r="10" />
-                                ))}
+                                {[1,2,3,4,5,6,7].map(h => <circle key={h} className={`flute-hole ${activeNoteIdx >= 0 && FINGERINGS[activeItem.sequence[activeNoteIdx].n][h] ? 'active' : ''}`} cx="50" cy={30 + (h * 26)} r="10" />)}
                             </svg>
                         </div>
                     </div>
