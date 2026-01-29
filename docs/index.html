@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="songs.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     
@@ -104,19 +105,14 @@
         const App = () => {
             const [view, setView] = useState('map');
             const [userProgress, setUserProgress] = useState(() => {
-                const saved = localStorage.getItem('userProgress');
-                return saved ? parseInt(saved) : 0;
+                return parseInt(localStorage.getItem('userProgress')) || 0;
             });
             const [activeItem, setActiveItem] = useState(null);
             const [isPlaying, setIsPlaying] = useState(false);
             const [activeNoteIdx, setActiveNoteIdx] = useState(-1);
             const [hasListened, setHasListened] = useState(false);
             const audioCtx = useRef(null);
-            const lastGeneratedSequence = useRef("");
-
-            useEffect(() => {
-                localStorage.setItem('userProgress', userProgress);
-            }, [userProgress]);
+            const lastSequenceRef = useRef("");
 
             const parseABC = (abc) => {
                 const map = { 'B': 'si_lat', 'A': 'la_lat', 'G': 'sol_lat', 'c': 'do2_lat', 'd': 're2_lat', 'F': 'fa_lat', 'E': 'mi_lat', 'D': 're_lat', 'C': 'do_lat' };
@@ -133,41 +129,57 @@
             };
 
             const fullCurriculum = useMemo(() => {
-                const stages = [
-                    { id: 'si', name: 'Nobre Si', notes: ['si_lat'], lib: 'nivelSi' },
-                    { id: 'la', name: 'Lá Imperial', notes: ['si_lat', 'la_lat'], lib: 'nivelLa' },
-                    { id: 'sol', name: 'Sol de Versalhes', notes: ['si_lat', 'la_lat', 'sol_lat'], lib: 'nivelSol' },
-                    { id: 'do2', name: 'Dó das Nuvens', notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat'], lib: 'nivelDo' },
-                    { id: 're2', name: 'Ré Majestoso', notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat', 're2_lat'], lib: 'nivelRe' },
-                    { id: 'fa_mi', name: 'Descida ao Fá/Mi', notes: ['si_lat', 'la_lat', 'sol_lat', 'do2_lat', 're2_lat', 'fa_lat', 'mi_lat'], lib: 'nivelFa' },
-                    { id: 'completo', name: 'A Flauta Completa', notes: ['do_lat', 're_lat', 'mi_lat', 'fa_lat', 'sol_lat', 'la_lat', 'si_lat', 'do2_lat', 're2_lat'], lib: 'nivelMi' }
-                ];
-
+                if (!window.songLibrary) return [];
+                const keys = ['nivelSi', 'nivelLa', 'nivelSol', 'nivelDo', 'nivelRe', 'nivelFa', 'nivelMi'];
+                const labels = {
+                    nivelSi: 'Si', nivelLa: 'Lá', nivelSol: 'Sol',
+                    nivelDo: 'Dó+', nivelRe: 'Ré+', nivelFa: 'Fá', nivelMi: 'Mi'
+                };
+                
                 const trail = [];
-                stages.forEach(s => {
-                    for (let i = 1; i <= 3; i++) {
+                keys.forEach(key => {
+                    const songs = window.songLibrary[key];
+                    if (!songs || songs.length === 0) return;
+
+                    const levelNotes = [...new Set(songs.flatMap(s => parseABC(s.abc).map(n => n.n)))];
+                    
+                    // Geração de 2 Exercícios dinâmicos por nível
+                    for (let i = 1; i <= 2; i++) {
                         let sequence;
                         let seqString;
                         do {
-                            sequence = Array(4).fill(0).map(() => ({ 
-                                n: s.notes[Math.floor(Math.random() * s.notes.length)], 
-                                d: Math.random() > 0.8 ? 2 : 1 
+                            sequence = Array(4).fill(0).map(() => ({
+                                n: levelNotes[Math.floor(Math.random() * levelNotes.length)],
+                                d: Math.random() > 0.8 ? 2 : 1
                             }));
                             seqString = JSON.stringify(sequence);
-                        } while (seqString === lastGeneratedSequence.current);
-                        
-                        lastGeneratedSequence.current = seqString;
-                        trail.push({ type: 'lesson', title: `Estudo ${i}: ${s.name}`, level: s.name, sequence });
-                    }
-                    
-                    if (window.songLibrary && window.songLibrary[s.lib]) {
-                        window.songLibrary[s.lib].forEach(song => {
-                            trail.push({ type: 'song', title: song.title, level: s.name, sequence: parseABC(song.abc) });
+                        } while (seqString === lastSequenceRef.current);
+                        lastSequenceRef.current = seqString;
+
+                        trail.push({
+                            type: 'lesson',
+                            title: `Exercício ${i}`,
+                            level: labels[key],
+                            sequence: sequence
                         });
                     }
+
+                    // Músicas reais do songs.js
+                    songs.forEach(song => {
+                        trail.push({
+                            type: 'song',
+                            title: song.title,
+                            level: labels[key],
+                            sequence: parseABC(song.abc)
+                        });
+                    });
                 });
                 return trail;
             }, []);
+
+            useEffect(() => {
+                localStorage.setItem('userProgress', userProgress);
+            }, [userProgress]);
 
             const playNote = (note, duration, start) => {
                 if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -176,20 +188,20 @@
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(FREQS[note], start);
                 gain.gain.setValueAtTime(0, start);
-                gain.gain.linearRampToValueAtTime(0.12, start + 0.05);
-                gain.gain.setValueAtTime(0.12, start + duration - 0.05);
+                gain.gain.linearRampToValueAtTime(0.1, start + 0.05);
+                gain.gain.setValueAtTime(0.1, start + duration - 0.05);
                 gain.gain.linearRampToValueAtTime(0, start + duration);
                 osc.connect(gain); gain.connect(audioCtx.current.destination);
                 osc.start(start); osc.stop(start + duration);
             };
 
             const startPlayback = () => {
-                if (isPlaying) return;
+                if (isPlaying || !activeItem) return;
                 setIsPlaying(true);
-                let time = audioCtx.current?.currentTime || 0.2;
-                if (!audioCtx.current) { audioCtx.current = new AudioContext(); time = 0.2; }
+                if (!audioCtx.current) audioCtx.current = new AudioContext();
+                let time = audioCtx.current.currentTime + 0.1;
                 activeItem.sequence.forEach((item, idx) => {
-                    const d = item.d * 0.7;
+                    const d = item.d * 0.6;
                     playNote(item.n, d, time);
                     setTimeout(() => setActiveNoteIdx(idx), (time - audioCtx.current.currentTime) * 1000);
                     time += d;
@@ -201,9 +213,10 @@
                 }, (time - audioCtx.current.currentTime) * 1000);
             };
 
-            const handleEnterItem = (item) => {
+            const handleSelectItem = (item) => {
                 setActiveItem(item);
                 setHasListened(false);
+                setActiveNoteIdx(-1);
                 setView('player');
             };
 
@@ -211,21 +224,21 @@
                 <div className="min-h-screen p-8 flex flex-col items-center">
                     <header className="text-center mb-16">
                         <h1 className="baroque-title text-5xl md:text-7xl text-[#D4AF37] mb-2 uppercase tracking-tighter">Academia Real</h1>
-                        <p className="text-[#B8860B] uppercase tracking-[0.4em] text-[10px] font-bold">Método de Sopro Acumulativo</p>
+                        <p className="text-[#B8860B] uppercase tracking-[0.4em] text-[10px] font-bold">Consumindo Biblioteca Real</p>
                     </header>
                     <div className="flex flex-wrap justify-center gap-8 max-w-7xl pb-40">
                         {fullCurriculum.map((item, idx) => {
                             const isLocked = idx > userProgress;
                             const isNext = idx === userProgress;
                             return (
-                                <div key={idx} onClick={() => !isLocked && handleEnterItem(item)}
+                                <div key={idx} onClick={() => !isLocked && handleSelectItem(item)}
                                     className={`baroque-box w-44 h-60 flex flex-col items-center justify-center p-6 transition-all ${isLocked ? 'opacity-30 grayscale cursor-not-allowed' : 'cursor-pointer hover:scale-105'} ${isNext ? 'next-challenge' : 'border-[#3a2b1a]'}`}>
                                     <div className="box-corner corner-tl"></div><div className="box-corner corner-tr"></div>
                                     <div className="box-corner corner-bl"></div><div className="box-corner corner-br"></div>
                                     <div className={`p-4 rounded-full mb-4 border ${isNext ? 'bg-[#D4AF37]/10 border-[#D4AF37]' : 'border-[#D4AF37]/20'}`}>
                                         <OrnateIcon name={isLocked ? 'Lock' : (item.type === 'lesson' ? 'Scroll' : 'Music')} size={32} className="text-[#D4AF37]" />
                                     </div>
-                                    <h4 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest">{item.title}</h4>
+                                    <h4 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest text-center">{item.title}</h4>
                                     <p className="text-[8px] text-[#800000] mt-2 italic">{item.level}</p>
                                     {idx < userProgress && <div className="absolute -top-2 -right-2 bg-[#D4AF37] text-black rounded-full p-1 shadow-lg"><OrnateIcon name="Check" size={14} /></div>}
                                 </div>
@@ -246,14 +259,14 @@
                             </div>
                             <div className="bg-black/40 p-6 rounded border border-[#D4AF37]/10 flex flex-wrap justify-center lg:justify-start gap-2 max-h-60 overflow-y-auto no-scrollbar">
                                 {activeItem.sequence.map((s, i) => (
-                                    <div key={i} className={`w-12 h-18 border flex flex-col items-center justify-center transition-all ${activeNoteIdx === i ? 'bg-[#D4AF37] text-black scale-110 shadow-lg' : 'bg-[#1a0f00] border-[#D4AF37]/20 text-[#D4AF37]'}`} style={{ minWidth: s.d >= 2 ? '90px' : '50px' }}>
+                                    <div key={i} className={`w-12 h-18 border flex flex-col items-center justify-center transition-all ${activeNoteIdx === i ? 'bg-[#D4AF37] text-black scale-110 shadow-lg' : 'bg-[#1a0f00] border-[#D4AF37]/20 text-[#D4AF37]'}`} style={{ minWidth: s.d >= 2 ? '80px' : '48px' }}>
                                         <span className="text-lg font-black">{LABELS[s.n]?.toUpperCase()}</span>
                                     </div>
                                 ))}
                             </div>
                             <div className="flex gap-4">
                                 <button onClick={startPlayback} disabled={isPlaying} className="flex-1 py-5 bg-[#D4AF37] text-black font-bold uppercase tracking-widest hover:brightness-110 disabled:opacity-50">Ouvir Guia</button>
-                                {!isPlaying && <button onClick={() => { if(userProgress === fullCurriculum.indexOf(activeItem)) setUserProgress(p=>p+1); setView('map'); }} disabled={!hasListened} className="flex-1 py-5 bg-[#600000] text-[#D4AF37] border border-[#D4AF37] font-bold uppercase tracking-widest hover:bg-[#800000] disabled:opacity-30 disabled:cursor-not-allowed">Concluir</button>}
+                                {!isPlaying && <button onClick={() => { if(userProgress === fullCurriculum.indexOf(activeItem)) setUserProgress(p => p + 1); setView('map'); }} disabled={!hasListened} className="flex-1 py-5 bg-[#600000] text-[#D4AF37] border border-[#D4AF37] font-bold uppercase tracking-widest hover:bg-[#800000] disabled:opacity-30">Concluir</button>}
                             </div>
                         </div>
                         <div className="bg-[#1a0f00] p-10 rounded-full border-2 border-[#D4AF37]/20 shadow-2xl">
@@ -273,3 +286,4 @@
     </script>
 </body>
 </html>
+
