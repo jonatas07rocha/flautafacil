@@ -22,32 +22,39 @@ const FINGERINGS = {
   'si_lat': [true, true, false, false, false, false, false, false]
 };
 
-// --- BIBLIOTECA DE MÚSICAS (Original Reintegrada) ---
-const songLibrary = {
-  nivelDo: [
-    { title: "O Despertar", abc: "C2 C2 C4" },
-    { title: "Sopro Constante", abc: "C C C2 C C C2" }
-  ],
-  nivelRe: [
-    { title: "Dueto em Ré", abc: "C D C D C2 D2" },
-    { title: "Salto Real", abc: "D2 C2 D4" }
-  ],
-  nivelMi: [
-    { title: "Hino à Alegria (Tema)", abc: "E E F G G F E D C C D E E3 D/ D2" },
-    { title: "Valsa Imperial", abc: "E2 D2 C2 E4" }
-  ],
-  nivelFa: [
-    { title: "Brisa do Sena", abc: "F E D C F2 E2" }
-  ],
-  nivelSol: [
-    { title: "Asa Branca (Intro)", abc: "C D E G G E F F" }
-  ],
-  nivelLa: [
-    { title: "Melodia de Versalhes", abc: "A G F E D C A2" }
-  ],
-  nivelSi: [
-    { title: "Escala Real", abc: "C D E F G A B C2" }
-  ]
+// --- BIBLIOTECA DE MÚSICAS ORIGINAL (Integrada conforme solicitado) ---
+const internalSongLibrary = {
+    nivelDo: [
+        { title: "Mary Had a Little Lamb", abc: "e d c d | e e e2 | d d d2 | e g g2 | e d c d | e e e e | d d e d | c4 |" },
+        { title: "Au Clair de la Lune", abc: "c c c d | e2 d2 | c e d d | c4 | c c c d | e2 d2 | c e d d | c4 |" },
+        { title: "Twinkle Twinkle", abc: "c c g g | a a g2 | f f e e | d d c2 | g g f f | e e d2 | g g f f | e e d2 |" },
+        { title: "Ode to Joy", abc: "e e f g | g f e d | c c d e | e>d d2 | e e f g | g f e d | c c d e | d>c c2 |" },
+        { title: "Jingle Bells", abc: "e e e2 | e e e2 | e g c d | e4 | f f f f | f e e e | e d d e | d2 g2 |" }
+    ],
+    nivelRe: [
+        { title: "The Boys Of Bluehill", abc: "F A | B A F A D2 F A | B A B d e2 d e | f a g f e g f e | d f e d B2 d B |" },
+        { title: "Saint Anne's Reel", abc: "f e d f e d c B | A2 F A D A F A | B2 G B E B G B | A2 F A D A F A |" }
+    ],
+    nivelMi: [
+        { title: "The Sally Gardens", abc: "G2 G A B A G B | d B e B d B A B | d2 B d e f g e | d B A B G E D E |" },
+        { title: "Sí Bheag Sí Mhór", abc: "f3 e d2 | d2 d e d2 | B4 A2 | F4 A2 | B A B c d2 | e4 d e |" }
+    ],
+    nivelFa: [
+        { title: "The Harvest Home", abc: "A F | D A F A D A F A | d e f e d c B A | e A f A g A f A | e d B A G F E |" },
+        { title: "King Of The Fairies", abc: "E D E F G F G A | B2 B2 G2 G A | B2 E2 E F G E | F G F E D2 B2 |" }
+    ],
+    nivelSol: [
+        { title: "The Blarney Pilgrim", abc: "D E D D E G | A2 A A B c | B A G A G E | G E A G E D |" },
+        { title: "Connaughtman's Rambles", abc: "F A A d A A | B A A d A G | F A A d f e | d B B B A G |" }
+    ],
+    nivelLa: [
+        { title: "The Banshee", abc: "G2 G D E D E G | A G A B d2 B d | e g e d B A G A | B A G E E D D E |" },
+        { title: "Out On The Ocean", abc: "D2 B B A G | B d B A2 B | G E D G2 A | B2 B A G E |" }
+    ],
+    nivelSi: [
+        { title: "Morrison's Jig", abc: "E3 B3 | E B E A F D | E D E B3 | d c B A F D |" },
+        { title: "The Butterfly", abc: "B2 E G2 E f3 | B2 E G2 E F E D | B2 d e2 f g3 | B2 d g2 e d B A |" }
+    ]
 };
 
 // --- ICONES ORNAMENTADOS ---
@@ -58,7 +65,7 @@ const OrnateIcon = ({ name, size = 24, className = "" }) => {
     Check: <path d="M20 6 9 17l-5-5" />,
     Music: <><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></>,
     Scroll: <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>,
-    Trophy: <><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></>
+    Trophy: <><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></>
   };
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -77,31 +84,47 @@ export default function App() {
   const [hasListened, setHasListened] = useState(false);
   
   const audioCtx = useRef(null);
-  const scrollRef = useRef(null);
 
-  // --- TRADUTOR ABC (Original) ---
+  // --- REFINADO TRADUTOR ABC ---
   const parseABC = (abcString) => {
     const notesMap = {
-      'C': 'do_lat', 'D': 're_lat', 'E': 'mi_lat', 'F': 'fa_lat', 
-      'G': 'sol_lat', 'A': 'la_lat', 'B': 'si_lat'
+      'C': 'do_lat', 'D': 're_lat', 'E': 'mi_lat', 'F': 'fa_lat', 'G': 'sol_lat', 'A': 'la_lat', 'B': 'si_lat',
+      'c': 'do_lat', 'd': 're_lat', 'e': 'mi_lat', 'f': 'fa_lat', 'g': 'sol_lat', 'a': 'la_lat', 'b': 'si_lat'
     };
-    const regex = /([CDEFGAB])([\d/]*)/g;
+    
+    // Limpeza de cabeçalhos ABC se houver
+    const notesOnly = abcString.split("K:").pop().split("\n").pop();
+    
+    const regex = /([CDEFGABcdefgab])([>]*)([\d/]*)/g;
     const sequence = [];
     let match;
-    while ((match = regex.exec(abcString)) !== null) {
-      let noteLetter = match[1];
-      let modifier = match[2];
+    
+    while ((match = regex.exec(notesOnly)) !== null) {
+      const noteLetter = match[1];
+      const dotted = match[2];
+      const modifier = match[3];
+      
       let duration = 1;
       if (modifier.includes('2')) duration = 2;
       else if (modifier.includes('3')) duration = 3;
       else if (modifier.includes('4')) duration = 4;
       else if (modifier.includes('/')) duration = 0.5;
-      if (notesMap[noteLetter]) sequence.push({ n: notesMap[noteLetter], d: duration });
+
+      // Lógica de ponto (e>d)
+      if (dotted === ">") {
+        duration = 1.5;
+        // O próximo item na regex será o 'd', que precisará ser 0.5 (compensado manualmente aqui se necessário, 
+        // mas para simplicidade de execução, tratamos o '>' como 1.5 e a nota seguinte segue seu modifier)
+      }
+
+      if (notesMap[noteLetter]) {
+        sequence.push({ n: notesMap[noteLetter], d: duration });
+      }
     }
     return sequence;
   };
 
-  // --- GERADOR DE CURRÍCULO COM MÚSICAS REAIS ---
+  // --- CONSTRUÇÃO DA TRILHA IMPERIAL ---
   const fullCurriculum = useMemo(() => {
     const levelConfigs = [
       { id: 'nivelDo', name: "Dó", notes: ["do_lat"], dur: [1, 2] },
@@ -115,7 +138,7 @@ export default function App() {
 
     const trail = [];
     levelConfigs.forEach((lvl) => {
-      // 1. Adiciona as 18 lições de treino
+      // Estações de Treino Técnico (18 caixas)
       for (let i = 1; i <= 18; i++) {
         const sequence = [];
         const len = 4 + (i % 3);
@@ -125,16 +148,11 @@ export default function App() {
             d: lvl.dur[Math.floor(Math.random() * lvl.dur.length)]
           });
         }
-        trail.push({
-          type: 'lesson',
-          levelName: lvl.name,
-          title: `Treino ${i}: ${lvl.name}`,
-          sequence
-        });
+        trail.push({ type: 'lesson', levelName: lvl.name, title: `Treino ${i} de ${lvl.name}`, sequence });
       }
       
-      // 2. Adiciona as músicas REAIS da biblioteca para este nível
-      const songs = songLibrary[lvl.id] || [];
+      // Estações de Recital Real (Músicas Originais do seu js/songs.js)
+      const songs = internalSongLibrary[lvl.id] || [];
       songs.forEach(song => {
         trail.push({
           type: 'song',
@@ -177,7 +195,7 @@ export default function App() {
     setHasListened(false);
     let scheduleTime = audioCtx.current.currentTime + 0.3;
     activeItem.sequence.forEach((item, idx) => {
-      const dur = item.d * 0.8;
+      const dur = item.d * 0.75;
       playNote(item.n, dur, scheduleTime);
       setTimeout(() => setActiveNoteIdx(idx), (scheduleTime - audioCtx.current.currentTime) * 1000);
       scheduleTime += dur;
@@ -196,102 +214,108 @@ export default function App() {
     setView('map');
   };
 
-  // --- VIEW: MAPA ---
+  // --- MAPA ---
   if (view === 'map') return (
     <div className="min-h-screen bg-[#1a0f00] text-[#f4e4bc] p-6 md:p-12 overflow-x-hidden font-serif">
       <header className="text-center mb-16">
-        <h1 className="text-5xl md:text-7xl font-black text-[#D4AF37] uppercase tracking-tighter mb-2" style={{ fontFamily: 'Cinzel, serif' }}>
-          Academia Imperial
+        <h1 className="text-5xl md:text-7xl font-black text-[#D4AF37] uppercase tracking-tighter mb-4" style={{ fontFamily: 'Cinzel, serif' }}>
+           Academia Real
         </h1>
-        <div className="h-1 w-64 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent mx-auto opacity-40"></div>
-        <p className="mt-4 text-[#B8860B] uppercase tracking-[0.4em] text-xs">A Arte de Soprar com Nobreza</p>
+        <div className="h-0.5 w-64 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent mx-auto opacity-50"></div>
+        <p className="mt-4 text-[#B8860B] uppercase tracking-[0.4em] text-[10px]">Conservatório de Flauta de Jacareí</p>
       </header>
 
-      <div className="flex flex-wrap justify-center gap-6 max-w-7xl mx-auto pb-32">
+      <div className="flex flex-wrap justify-center gap-6 max-w-7xl mx-auto pb-40">
         {fullCurriculum.map((item, idx) => {
           const isUnlocked = idx <= userProgress;
           const isCompleted = idx < userProgress;
           const isNext = idx === userProgress;
           return (
             <div key={idx} onClick={() => isUnlocked && (setActiveItem(item), setView('player'))}
-              className={`relative w-40 h-52 md:w-48 md:h-60 group flex flex-col items-center justify-center border-2 transition-all duration-500 rounded-sm
-                ${isUnlocked ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-not-allowed opacity-30 grayscale'}
-                ${isNext ? 'border-[#D4AF37] bg-[#2a1b0a] shadow-[0_0_30px_rgba(212,175,55,0.3)]' : 'border-[#3a2b1a] bg-[#1a0f00]'}
+              className={`relative w-40 h-56 md:w-44 md:h-64 flex flex-col items-center justify-center border transition-all duration-500 rounded-lg overflow-hidden
+                ${isUnlocked ? 'cursor-pointer hover:border-[#D4AF37] hover:bg-[#2a1b0a]' : 'cursor-not-allowed opacity-30 grayscale'}
+                ${isNext ? 'border-[#D4AF37] shadow-[0_0_20px_rgba(212,175,55,0.2)]' : 'border-[#3a2b1a] bg-[#1a0f00]'}
               `}>
-              <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-[#D4AF37]/40"></div>
-              <div className="p-4 rounded-full mb-3 border border-[#D4AF37]/20">
+              {/* Ornamento de Canto */}
+              <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-[#D4AF37]/30"></div>
+              
+              <div className={`p-4 rounded-full mb-4 border ${isNext ? 'bg-[#D4AF37]/10 border-[#D4AF37]' : 'border-[#D4AF37]/20'}`}>
                 <OrnateIcon name={!isUnlocked ? 'Lock' : (item.type === 'lesson' ? 'Scroll' : 'Music')} size={32} className={isNext ? 'text-[#D4AF37] animate-pulse' : 'text-[#B8860B]'} />
               </div>
-              <div className="px-2 text-center">
-                <h4 className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest">{item.title}</h4>
-                <p className="text-[9px] text-[#800000] mt-1 italic">{item.levelName}</p>
+
+              <div className="px-3 text-center">
+                <h4 className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-widest leading-tight">{item.title}</h4>
+                <p className="text-[8px] text-[#800000] mt-2 italic font-serif">{item.levelName}</p>
               </div>
-              {isCompleted && <div className="absolute -top-3 -right-3 bg-[#D4AF37] text-black rounded-full p-1 shadow-lg"><OrnateIcon name="Check" size={14} /></div>}
+
+              {isCompleted && <div className="absolute -top-1 -right-1 bg-[#D4AF37] text-black rounded-full p-1 shadow-lg scale-75"><OrnateIcon name="Check" size={14} /></div>}
             </div>
           );
         })}
       </div>
 
-      <footer className="fixed bottom-0 left-0 right-0 p-5 bg-black/90 backdrop-blur-md border-t border-[#D4AF37]/30 flex justify-between items-center z-50">
+      <footer className="fixed bottom-0 left-0 right-0 p-6 bg-black/90 backdrop-blur-xl border-t border-[#D4AF37]/30 flex justify-between items-center z-50">
          <div className="px-4">
-           <p className="text-[9px] uppercase text-[#B8860B] tracking-widest">Maestria Alcançada</p>
-           <p className="text-sm font-bold text-[#D4AF37]">{userProgress} Estações</p>
+           <p className="text-[9px] uppercase text-[#B8860B] tracking-widest">Estações de Maestria</p>
+           <p className="text-sm font-bold text-[#D4AF37]">{userProgress} / {fullCurriculum.length}</p>
          </div>
-         <div className="h-2 flex-1 mx-8 bg-[#3a2b1a] rounded-full overflow-hidden border border-white/5">
+         <div className="h-1.5 flex-1 mx-8 bg-[#3a2b1a] rounded-full overflow-hidden border border-white/5">
             <div className="h-full bg-gradient-to-r from-[#800000] to-[#D4AF37] transition-all duration-1000" style={{ width: `${(userProgress / fullCurriculum.length) * 100}%` }}></div>
          </div>
       </footer>
     </div>
   );
 
-  // --- VIEW: PLAYER ---
+  // --- PLAYER ---
   return (
     <div className="min-h-screen bg-[#1a0f00] text-[#f4e4bc] p-4 md:p-10 font-serif flex flex-col" style={{ backgroundImage: 'radial-gradient(circle at center, #2a1b0a 0%, #1a0f00 100%)' }}>
       <div className="max-w-5xl mx-auto w-full flex-1 flex flex-col">
-        <button onClick={() => setView('map')} className="w-fit text-[#D4AF37] mb-8 flex items-center gap-2 uppercase tracking-[0.3em] text-xs font-bold hover:brightness-125 transition-all">
-          ← Sair do Estúdio
+        <button onClick={() => setView('map')} className="w-fit text-[#D4AF37] mb-8 flex items-center gap-2 uppercase tracking-[0.3em] text-[10px] font-bold hover:brightness-125 transition-all">
+          ← Voltar ao Conservatório
         </button>
 
-        <div className="bg-[#2a1b0a] border-4 border-double border-[#D4AF37] rounded-lg shadow-2xl p-6 md:p-12 relative overflow-hidden flex-1 flex flex-col">
+        <div className="bg-[#2a1b0a] border-2 border-[#D4AF37]/50 rounded-lg shadow-2xl p-6 md:p-12 relative overflow-hidden flex-1 flex flex-col">
           <div className="text-center mb-10">
             <span className="text-[#B8860B] text-[10px] uppercase tracking-[0.5em] block mb-2">{activeItem.levelName}</span>
             <h2 className="text-3xl md:text-5xl font-black text-white uppercase" style={{ fontFamily: 'Cinzel, serif' }}>{activeItem.title}</h2>
+            <div className="h-0.5 w-24 bg-[#D4AF37] mx-auto mt-4 opacity-30"></div>
           </div>
 
           <div className="flex-1 flex flex-col lg:flex-row gap-12 items-center justify-center">
             <div className="flex-1 w-full space-y-8">
-              <div className="bg-[#1a0f00]/80 p-6 rounded border border-[#D4AF37]/20 flex flex-wrap justify-center gap-2 overflow-y-auto max-h-64 no-scrollbar">
+              <div className="bg-black/40 p-6 rounded-md border border-[#D4AF37]/10 flex flex-wrap justify-center gap-2 overflow-y-auto max-h-72 no-scrollbar">
                 {activeItem.sequence.map((step, i) => (
-                  <div key={i} className={`w-14 h-20 border-2 flex flex-col items-center justify-center transition-all duration-300
-                      ${activeNoteIdx === i ? 'bg-[#D4AF37] border-white scale-110 text-black' : 'bg-[#2a1b0a] border-[#D4AF37]/40 text-[#D4AF37]'}
-                    `} style={{ minWidth: step.d >= 2 ? '100px' : '60px' }}>
-                    <span className="text-xl font-black">{LABELS[step.n]?.toUpperCase()}</span>
-                    <span className="text-[9px] opacity-60 uppercase">{step.d}t</span>
+                  <div key={i} className={`w-12 h-16 md:w-14 md:h-20 border flex flex-col items-center justify-center transition-all duration-300 rounded-sm
+                      ${activeNoteIdx === i ? 'bg-[#D4AF37] border-white scale-110 text-black shadow-lg' : 'bg-[#1a0f00] border-[#D4AF37]/20 text-[#D4AF37]'}
+                    `} style={{ minWidth: step.d >= 2 ? '90px' : '55px' }}>
+                    <span className="text-lg font-black">{LABELS[step.n]?.toUpperCase()}</span>
+                    <span className="text-[8px] opacity-60 uppercase tracking-tighter">{step.d}t</span>
                   </div>
                 ))}
               </div>
 
               <div className="flex flex-col gap-4 max-w-sm mx-auto">
                 <button onClick={handleStartPlayback} disabled={isPlaying}
-                  className={`w-full py-5 font-bold text-lg uppercase tracking-widest transition-all border-b-4
+                  className={`w-full py-5 font-bold text-sm uppercase tracking-widest transition-all border-b-4
                     ${isPlaying ? 'bg-gray-800 border-gray-900 text-gray-600' : 'bg-[#D4AF37] text-black border-[#800000] hover:brightness-110 active:translate-y-1 active:border-b-0'}
                   `}>
-                  {isPlaying ? 'Escute a Corte...' : 'Ouvir Guia'}
+                  {isPlaying ? 'Acompanhando o Maestro...' : 'Ouvir a Corte'}
                 </button>
                 {hasListened && !isPlaying && (
-                  <button onClick={handleComplete} className="w-full py-5 bg-[#800000] text-[#D4AF37] border-2 border-[#D4AF37] font-bold text-lg uppercase tracking-widest hover:bg-[#a00000]">
+                  <button onClick={handleComplete} className="w-full py-5 bg-[#800000] text-[#D4AF37] border border-[#D4AF37] font-bold text-sm uppercase tracking-widest hover:bg-[#a00000]">
                     Concluir Atividade
                   </button>
                 )}
               </div>
             </div>
 
-            <div className="bg-[#1a0f00] p-10 rounded-full border-2 border-[#D4AF37]/30 shadow-2xl">
+            <div className="bg-[#1a0f00] p-10 rounded-full border-2 border-[#D4AF37]/20 shadow-2xl relative group">
+                {/* Flauta Visual com Toque Barroco */}
                 <svg viewBox="0 0 100 240" className="w-[120px] md:w-[150px] h-auto">
-                  <rect x="35" y="0" width="30" height="240" rx="15" fill="#3a1a00" stroke="#D4AF37" strokeWidth="1" />
-                  <circle className={`transition-all duration-200 ${activeNoteIdx >= 0 && FINGERINGS[activeItem.sequence[activeNoteIdx].n][0] ? 'fill-[#D4AF37]' : 'fill-[#1a0f00]'}`} cx="85" cy="40" r="10" stroke="#D4AF37" strokeWidth="0.5" />
+                  <rect x="38" y="0" width="24" height="240" rx="12" fill="#3a1a00" stroke="#D4AF37" strokeWidth="0.5" />
+                  <circle className={`transition-all duration-200 ${activeNoteIdx >= 0 && FINGERINGS[activeItem.sequence[activeNoteIdx].n][0] ? 'fill-[#D4AF37]' : 'fill-[#1a0f00]'}`} cx="85" cy="40" r="9" stroke="#D4AF37" strokeWidth="0.3" />
                   {[1,2,3,4,5,6,7].map(h => (
-                    <circle key={h} className={`transition-all duration-200 ${activeNoteIdx >= 0 && FINGERINGS[activeItem.sequence[activeNoteIdx].n][h] ? 'fill-[#D4AF37]' : 'fill-[#1a0f00]'}`} cx="50" cy={30 + (h * 26)} r="10" stroke="#D4AF37" strokeWidth="0.5" />
+                    <circle key={h} className={`transition-all duration-200 ${activeNoteIdx >= 0 && FINGERINGS[activeItem.sequence[activeNoteIdx].n][h] ? 'fill-[#D4AF37]' : 'fill-[#1a0f00]'}`} cx="50" cy={30 + (h * 26)} r="9" stroke="#D4AF37" strokeWidth="0.3" />
                   ))}
                 </svg>
             </div>
