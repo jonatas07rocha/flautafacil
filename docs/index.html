@@ -63,6 +63,20 @@
         .flute-hole.active { fill: var(--gold); filter: drop-shadow(0 0 8px var(--gold)); }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        .option-button {
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            background: rgba(26, 15, 0, 0.8);
+            transition: all 0.3s ease;
+        }
+        .option-button:hover:not(:disabled) {
+            border-color: var(--gold);
+            background: rgba(212, 175, 55, 0.1);
+        }
+        .option-button.selected {
+            background: var(--gold);
+            color: var(--dark-wood);
+        }
     </style>
 </head>
 <body>
@@ -73,12 +87,14 @@
 
         const FREQS = { 
             'do_lat': 261.63, 're_lat': 293.66, 'mi_lat': 329.63, 'fa_lat': 349.23, 'sol_lat': 392.00, 'la_lat': 440.00, 'si_lat': 493.88,
-            'do2_lat': 523.25, 're2_lat': 587.33
+            'do2_lat': 523.25, 're2_lat': 587.33, 'rest': 0
         };
+
         const LABELS = { 
             'do_lat': 'Dó', 're_lat': 'Ré', 'mi_lat': 'Mi', 'fa_lat': 'Fá', 'sol_lat': 'Sol', 'la_lat': 'Lá', 'si_lat': 'Si',
-            'do2_lat': 'Dó♯', 're2_lat': 'Ré♯' 
+            'do2_lat': 'Dó♯', 're2_lat': 'Ré♯', 'rest': 'z'
         };
+
         const FINGERINGS = {
             'si_lat':  [true, true, false, false, false, false, false, false],
             'la_lat':  [true, true, true, false, false, false, false, false],
@@ -88,7 +104,8 @@
             'fa_lat':  [true, true, true, true, true, false, true, true],
             'mi_lat':  [true, true, true, true, true, true, false, false],
             're_lat':  [true, true, true, true, true, true, true, false],
-            'do_lat':  [true, true, true, true, true, true, true, true]
+            'do_lat':  [true, true, true, true, true, true, true, true],
+            'rest':    [false, false, false, false, false, false, false, false]
         };
 
         const LEVEL_CONFIG = {
@@ -107,7 +124,8 @@
                 Play: <path d="m5 3 14 9-14 9V3z" />,
                 Check: <path d="M20 6 9 17l-5-5" />,
                 Music: <><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></>,
-                Scroll: <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                Scroll: <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>,
+                Star: <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
             };
             return <svg viewBox="0 0 24 24" width={size} height={size} stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" className={className}>{icons[name]}</svg>;
         };
@@ -119,21 +137,69 @@
             const [isPlaying, setIsPlaying] = useState(false);
             const [activeNoteIdx, setActiveNoteIdx] = useState(-1);
             const [hasListened, setHasListened] = useState(false);
+            const [examOptions, setExamOptions] = useState([]);
+            const [selectedOption, setSelectedOption] = useState(null);
+            
             const audioCtx = useRef(null);
-            const lastSeqRef = useRef("");
+            const gainNode = useRef(null);
+            const filterNode = useRef(null);
 
+            // --- 1) ABC PARSER EXPRESSIVO ---
             const parseABC = (abc) => {
-                const map = { 'B': 'si_lat', 'A': 'la_lat', 'G': 'sol_lat', 'c': 'do2_lat', 'd': 're2_lat', 'F': 'fa_lat', 'E': 'mi_lat', 'D': 're_lat', 'C': 'do_lat' };
-                const regex = /([ABCDEFGcdefg])([>]*)([\d/]*)/g;
-                const seq = [];
-                let m;
-                while ((m = regex.exec(abc)) !== null) {
-                    let dur = 1;
-                    if (m[3].includes('2')) dur = 2; else if (m[3].includes('4')) dur = 4; else if (m[3].includes('/')) dur = 0.5;
-                    if (m[2] === ">") dur = 1.5;
-                    if (map[m[1]]) seq.push({ n: map[m[1]], d: dur });
+                const noteMap = { 'B': 'si_lat', 'A': 'la_lat', 'G': 'sol_lat', 'c': 'do2_lat', 'd': 're2_lat', 'F': 'fa_lat', 'E': 'mi_lat', 'D': 're_lat', 'C': 'do_lat', 'z': 'rest', 'Z': 'rest' };
+                // Regex: notas/pausas, broken rhythm, duração, compassos, ligaduras
+                const regex = /([ABCDEFGcz])([><]{1,2})?([\d/]*)|(\|)|(-)/gi;
+                const sequence = [];
+                let match;
+                let measureCount = 0;
+
+                while ((match = regex.exec(abc)) !== null) {
+                    if (match[4] === '|') { // Compasso: Delimitador de frase
+                        measureCount++;
+                        if (sequence.length > 0) sequence[sequence.length - 1].isEndOfPhrase = true;
+                        continue;
+                    }
+                    if (match[5] === '-') { // Tie: Ligadura
+                        if (sequence.length > 0) sequence[sequence.length - 1].isTied = true;
+                        continue;
+                    }
+
+                    const noteChar = match[1];
+                    const broken = match[2];
+                    const durStr = match[3];
+                    let duration = 1.0;
+
+                    // Cálculo de duração complexa (frações/inteiros)
+                    if (durStr) {
+                        if (durStr.includes('/')) {
+                            const parts = durStr.split('/');
+                            const num = parseFloat(parts[0]) || 1;
+                            const den = parts[1] === "" ? 2 : (parseFloat(parts[1]) || 2);
+                            duration = num / den;
+                        } else {
+                            duration = parseFloat(durStr);
+                        }
+                    }
+
+                    // Ritmo Quebrado (Broken Rhythm)
+                    if (broken === '>') duration *= 1.5;
+                    else if (broken === '<') duration *= 0.5;
+                    else if (broken === '>>') duration *= 1.75;
+                    else if (broken === '<<') duration *= 0.25;
+
+                    const noteKey = noteMap[noteChar.toUpperCase()] || (noteChar === 'c' ? 'do2_lat' : noteMap[noteChar.toUpperCase()]);
+                    if (noteKey) {
+                        sequence.push({ 
+                            n: noteKey, 
+                            d: duration, 
+                            isEndOfPhrase: false, 
+                            isTied: false,
+                            measure: measureCount,
+                            beat: sequence.length % 4 // Simplificação métrica para dinâmica
+                        });
+                    }
                 }
-                return seq;
+                return sequence;
             };
 
             const fullCurriculum = useMemo(() => {
@@ -144,108 +210,169 @@
                 sortedKeys.forEach(key => {
                     const songs = lib[key];
                     if (!songs || songs.length === 0) return;
-                    const config = LEVEL_CONFIG[key] || { name: key, notes: ['si_lat'] };
+                    const config = LEVEL_CONFIG[key];
 
-                    // 1. PRIMEIRA MÚSICA (Apresentação Sensorial)
-                    const firstSong = songs[0];
-                    const firstSongParsed = parseABC(firstSong.abc);
-                    trail.push({
-                        type: 'song',
-                        title: firstSong.title,
-                        levelName: config.name,
-                        sequence: firstSongParsed
+                    const firstSongParsed = parseABC(songs[0].abc);
+                    trail.push({ type: 'song', title: songs[0].title, levelName: config.name, sequence: firstSongParsed, isRealMusic: true });
+
+                    const songNotes = [...new Set(firstSongParsed.filter(n => n.n !== 'rest').map(n => n.n))];
+                    trail.push({ 
+                        type: 'lesson', title: `Exercício de Fixação`, levelName: config.name, 
+                        sequence: Array(4).fill(0).map((_, i) => ({ n: songNotes[Math.floor(Math.random() * songNotes.length)], d: 1, beat: i }))
                     });
 
-                    // 2. EXERCÍCIO 1 (Dirigido pelas notas da primeira música)
-                    const songNotes = [...new Set(firstSongParsed.map(n => n.n))];
-                    let seq1, str1;
-                    do {
-                        seq1 = Array(4).fill(0).map(() => ({
-                            n: songNotes[Math.floor(Math.random() * songNotes.length)],
-                            d: Math.random() > 0.8 ? 2 : 1
-                        }));
-                        str1 = JSON.stringify(seq1);
-                    } while (str1 === lastSeqRef.current);
-                    lastSeqRef.current = str1;
-                    trail.push({ type: 'lesson', title: `Estudo Técnico I`, levelName: config.name, sequence: seq1 });
-
-                    // 3. EXERCÍCIO 2 (Livre com todas as notas do nível)
-                    let seq2, str2;
-                    do {
-                        seq2 = Array(4).fill(0).map(() => ({
-                            n: config.notes[Math.floor(Math.random() * config.notes.length)],
-                            d: Math.random() > 0.8 ? 2 : 1
-                        }));
-                        str2 = JSON.stringify(seq2);
-                    } while (str2 === lastSeqRef.current);
-                    lastSeqRef.current = str2;
-                    trail.push({ type: 'lesson', title: `Estudo Técnico II`, levelName: config.name, sequence: seq2 });
-
-                    // 4. MÚSICAS RESTANTES (Consolidação)
                     if (songs.length > 1) {
                         songs.slice(1).forEach(song => {
-                            trail.push({
-                                type: 'song',
-                                title: song.title,
-                                levelName: config.name,
-                                sequence: parseABC(song.abc)
-                            });
+                            trail.push({ type: 'song', title: song.title, levelName: config.name, sequence: parseABC(song.abc), isRealMusic: true });
                         });
                     }
+                    trail.push({ type: 'exam', title: `Avaliação: ${config.name}`, levelName: config.name, notes: config.notes });
                 });
-
                 return trail;
             }, []);
 
             useEffect(() => { localStorage.setItem('userProgress', userProgress); }, [userProgress]);
 
-            const playNote = (note, duration, start) => {
-                if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = audioCtx.current.createOscillator();
-                const gain = audioCtx.current.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(FREQS[note], start);
-                gain.gain.setValueAtTime(0, start);
-                gain.gain.linearRampToValueAtTime(0.12, start + 0.05);
-                gain.gain.setValueAtTime(0.12, start + duration - 0.05);
-                gain.gain.linearRampToValueAtTime(0, start + duration);
-                osc.connect(gain); gain.connect(audioCtx.current.destination);
-                osc.start(start); osc.stop(start + duration);
+            // --- 4) TIMBRE ORGÂNICO E DINÂMICA ---
+            const playComplexNote = (note, duration, startTime, isTied, isNextSame, dynamicWeight) => {
+                if (note === 'rest') return;
+
+                const ctx = audioCtx.current;
+                
+                // Humanização sutil de pitch (Micro-rubato/Vibrato)
+                const jitter = (Math.random() - 0.5) * 0.002;
+                const freq = FREQS[note] * (1 + jitter);
+
+                // Síntese Aditiva: Oscilador principal (Triangle) + Harmônico suave (Sine)
+                const osc1 = ctx.createOscillator();
+                const osc2 = ctx.createOscillator();
+                const noteGain = ctx.createGain();
+
+                osc1.type = 'triangle';
+                osc2.type = 'sine';
+                osc1.frequency.setValueAtTime(freq, startTime);
+                osc2.frequency.setValueAtTime(freq * 2, startTime); // Harmônico oitava
+
+                // Envelope de Ganho (ADSR adaptado)
+                const attack = isTied ? 0.01 : 0.04; // Tie remove o ataque agressivo
+                const decay = duration * 0.2;
+                const sustain = dynamicWeight * 0.12;
+                const release = isTied ? 0.01 : 0.08;
+
+                noteGain.gain.setValueAtTime(0, startTime);
+                noteGain.gain.linearRampToValueAtTime(sustain * 1.2, startTime + attack);
+                noteGain.gain.exponentialRampToValueAtTime(sustain, startTime + attack + decay);
+                
+                // Decrescendo natural no fim da nota/frase
+                const endNote = startTime + duration;
+                noteGain.gain.setValueAtTime(sustain, endNote - release);
+                noteGain.gain.linearRampToValueAtTime(0, endNote);
+
+                // Filtro dinâmico para "ar" (timbre de flauta)
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(2000, startTime);
+                filter.frequency.exponentialRampToValueAtTime(1200, endNote);
+
+                osc1.connect(noteGain);
+                osc2.connect(noteGain);
+                noteGain.connect(filter);
+                filter.connect(gainNode.current);
+
+                osc1.start(startTime);
+                osc2.start(startTime);
+                osc1.stop(endNote);
+                osc2.stop(endNote);
             };
 
-            const startPlayback = () => {
+            const startPlayback = async () => {
                 if (isPlaying) return;
                 setIsPlaying(true);
-                if (!audioCtx.current) audioCtx.current = new AudioContext();
-                let time = audioCtx.current.currentTime + 0.1;
-                activeItem.sequence.forEach((item, idx) => {
-                    const d = item.d * 0.7;
-                    playNote(item.n, d, time);
-                    setTimeout(() => setActiveNoteIdx(idx), (time - audioCtx.current.currentTime) * 1000);
-                    time += d;
-                });
-                setTimeout(() => { 
-                    setIsPlaying(false); setActiveNoteIdx(-1); setHasListened(true); 
-                }, (time - audioCtx.current.currentTime) * 1000);
+                
+                if (!audioCtx.current) {
+                    audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+                    gainNode.current = audioCtx.current.createGain();
+                    gainNode.current.connect(audioCtx.current.destination);
+                }
+
+                const ctx = audioCtx.current;
+                const sequence = activeItem.sequence;
+                
+                // --- 5) TEMPO E RUBATO ---
+                // Músicas reais têm tempo mais fluido; exercícios são rígidos.
+                const baseBPM = activeItem.isRealMusic ? 0.58 : 0.65;
+                let currentTime = ctx.currentTime + 0.1;
+
+                for (let i = 0; i < sequence.length; i++) {
+                    const item = sequence[i];
+                    const next = sequence[i + 1];
+                    
+                    setActiveNoteIdx(i);
+
+                    // Dinâmica Métrica: Tempo 1 mais forte
+                    const metricWeight = (item.beat === 0) ? 1.1 : 0.9;
+                    // Expressividade de Frase: Crescendo leve no meio da sequência
+                    const phraseWeight = 1.0 + Math.sin((i / sequence.length) * Math.PI) * 0.15;
+                    const finalWeight = metricWeight * phraseWeight;
+
+                    const noteDuration = item.d * baseBPM;
+
+                    if (item.n !== 'rest') {
+                        playComplexNote(item.n, noteDuration, currentTime, item.isTied, next?.n === item.n, finalWeight);
+                    }
+
+                    // --- 2) FRASEADO E RESPIRAÇÃO ---
+                    let silenceAfter = 0;
+                    if (item.isEndOfPhrase) {
+                        silenceAfter = 0.15; // Respiração no compasso '|'
+                    } else if (item.n === 'rest') {
+                        silenceAfter = 0; // Pausas 'z' já ocupam tempo
+                    } else if (!item.isTied) {
+                        silenceAfter = 0.02; // Micro-articulação entre notas separadas
+                    }
+
+                    const rubato = activeItem.isRealMusic ? (Math.random() * 0.01) : 0;
+                    const totalStep = noteDuration + rubato;
+
+                    currentTime += totalStep;
+                    await new Promise(r => setTimeout(r, (totalStep + silenceAfter) * 1000));
+                }
+
+                setIsPlaying(false);
+                setActiveNoteIdx(-1);
+                setHasListened(true);
+            };
+
+            const handleSelectItem = (item) => {
+                setActiveItem(item);
+                setHasListened(false);
+                setSelectedOption(null);
+                if (item.type === 'exam') {
+                    const correct = Array(4).fill(0).map(() => ({ n: item.notes[Math.floor(Math.random() * item.notes.length)], d: 1 }));
+                    const distract = () => [...correct].sort(() => Math.random() - 0.5);
+                    item.sequence = correct;
+                    setExamOptions([{ id: 'correct', sequence: correct }, { id: 'd1', sequence: distract() }, { id: 'd2', sequence: distract() }].sort(() => Math.random() - 0.5));
+                }
+                setView('player');
             };
 
             if (view === 'map') return (
                 <div className="min-h-screen p-8 flex flex-col items-center">
                     <header className="text-center mb-16">
                         <h1 className="baroque-title text-5xl md:text-7xl text-[#D4AF37] mb-2 uppercase tracking-tighter">Academia Real</h1>
-                        <p className="text-[#B8860B] uppercase tracking-[0.4em] text-[10px] font-bold">Consumindo Biblioteca de Músicas</p>
+                        <p className="text-[#B8860B] uppercase tracking-[0.4em] text-[10px] font-bold">Conservatório Digital de Sopro</p>
                     </header>
                     <div className="flex flex-wrap justify-center gap-8 max-w-7xl pb-40">
                         {fullCurriculum.map((item, idx) => {
                             const isLocked = idx > userProgress;
                             const isNext = idx === userProgress;
                             return (
-                                <div key={idx} onClick={() => !isLocked && (setActiveItem(item), setHasListened(false), setView('player'))}
+                                <div key={idx} onClick={() => !isLocked && handleSelectItem(item)}
                                     className={`baroque-box w-44 h-60 flex flex-col items-center justify-center p-6 transition-all ${isLocked ? 'opacity-30 grayscale cursor-not-allowed' : 'cursor-pointer hover:scale-105'} ${isNext ? 'next-challenge' : 'border-[#3a2b1a]'}`}>
                                     <div className="box-corner corner-tl"></div><div className="box-corner corner-tr"></div>
                                     <div className="box-corner corner-bl"></div><div className="box-corner corner-br"></div>
                                     <div className={`p-4 rounded-full mb-4 border ${isNext ? 'bg-[#D4AF37]/10 border-[#D4AF37]' : 'border-[#D4AF37]/20'}`}>
-                                        <OrnateIcon name={isLocked ? 'Lock' : (item.type === 'lesson' ? 'Scroll' : 'Music')} size={32} className="text-[#D4AF37]" />
+                                        <OrnateIcon name={isLocked ? 'Lock' : (item.type === 'song' ? 'Music' : item.type === 'exam' ? 'Star' : 'Scroll')} size={32} className="text-[#D4AF37]" />
                                     </div>
                                     <h4 className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest text-center">{item.title}</h4>
                                     <p className="text-[8px] text-[#800000] mt-2 italic text-center">{item.levelName}</p>
@@ -259,25 +386,43 @@
 
             return (
                 <div className="min-h-screen p-4 md:p-10 flex flex-col items-center">
-                    <button onClick={() => setView('map')} className="self-start text-[#D4AF37] uppercase text-[10px] font-bold tracking-[0.3em] mb-10">← Voltar</button>
+                    <button onClick={() => setView('map')} className="self-start text-[#D4AF37] uppercase text-[10px] font-bold tracking-[0.3em] mb-10">← Regressar ao Mapa</button>
                     <div className="w-full max-w-5xl bg-[#2a1b0a] border-4 border-double border-[#D4AF37]/40 rounded-lg shadow-2xl p-8 md:p-12 flex flex-col lg:flex-row items-center gap-12">
                         <div className="flex-1 w-full space-y-8">
                             <div className="text-center lg:text-left">
                                 <span className="text-[#B8860B] text-[10px] uppercase tracking-[0.5em]">{activeItem.levelName}</span>
                                 <h2 className="baroque-title text-3xl md:text-5xl text-white uppercase">{activeItem.title}</h2>
                             </div>
-                            <div className="bg-black/40 p-6 rounded border border-[#D4AF37]/10 flex flex-wrap justify-center lg:justify-start gap-2 max-h-60 overflow-y-auto no-scrollbar">
-                                {activeItem.sequence.map((s, i) => (
-                                    <div key={i} className={`w-12 h-18 border flex flex-col items-center justify-center transition-all ${activeNoteIdx === i ? 'bg-[#D4AF37] text-black scale-110 shadow-lg' : 'bg-[#1a0f00] border-[#D4AF37]/20 text-[#D4AF37]'}`} style={{ minWidth: s.d >= 2 ? '90px' : '50px' }}>
-                                        <span className="text-lg font-black">{LABELS[s.n]?.toUpperCase()}</span>
+
+                            {activeItem.type === 'exam' ? (
+                                <div className="space-y-6">
+                                    <p className="text-[#D4AF37] uppercase text-[10px] tracking-widest font-bold">Escute e identifique a melodia imperial:</p>
+                                    <div className="grid gap-3">
+                                        {examOptions.map((opt, i) => (
+                                            <button key={i} onClick={() => setSelectedOption(opt.id)} disabled={!hasListened || isPlaying}
+                                                className={`option-button p-4 text-left rounded ${selectedOption === opt.id ? 'selected' : ''}`}>
+                                                <span className="font-bold tracking-widest uppercase text-xs">Sequência {i + 1}</span>
+                                            </button>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            ) : (
+                                <div className="bg-black/40 p-6 rounded border border-[#D4AF37]/10 flex flex-wrap justify-center lg:justify-start gap-2 max-h-60 overflow-y-auto no-scrollbar">
+                                    {activeItem.sequence.map((s, i) => (
+                                        <div key={i} className={`w-12 h-18 border flex flex-col items-center justify-center transition-all ${activeNoteIdx === i ? 'bg-[#D4AF37] text-black scale-110 shadow-lg' : 'bg-[#1a0f00] border-[#D4AF37]/20 text-[#D4AF37]'}`}>
+                                            <span className="text-lg font-black">{LABELS[s.n]?.toUpperCase()}</span>
+                                            <span className="text-[8px] opacity-40">{s.n === 'rest' ? '' : s.d}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
                             <div className="flex gap-4">
-                                <button onClick={startPlayback} disabled={isPlaying} className="flex-1 py-5 bg-[#D4AF37] text-black font-bold uppercase tracking-widest hover:brightness-110 disabled:opacity-50">Ouvir Guia</button>
-                                {!isPlaying && <button onClick={() => { if(userProgress === fullCurriculum.indexOf(activeItem)) setUserProgress(p=>p+1); setView('map'); }} disabled={!hasListened} className="flex-1 py-5 bg-[#600000] text-[#D4AF37] border border-[#D4AF37] font-bold uppercase tracking-widest hover:bg-[#800000] disabled:opacity-30">Concluir</button>}
+                                <button onClick={startPlayback} disabled={isPlaying} className="flex-1 py-5 bg-[#D4AF37] text-black font-bold uppercase tracking-widest hover:brightness-110 disabled:opacity-50">Ouvir Guia Real</button>
+                                {!isPlaying && <button onClick={() => (activeItem.type === 'exam' && selectedOption !== 'correct') ? alert("O ouvido imperial exige maior precisão.") : (userProgress === fullCurriculum.indexOf(activeItem) && setUserProgress(p => p+1), setView('map'))} disabled={!hasListened || (activeItem.type === 'exam' && !selectedOption)} className="flex-1 py-5 bg-[#600000] text-[#D4AF37] border border-[#D4AF37] font-bold uppercase tracking-widest hover:bg-[#800000] disabled:opacity-30">Concluir</button>}
                             </div>
                         </div>
+                        
                         <div className="bg-[#1a0f00] p-10 rounded-full border-2 border-[#D4AF37]/20 shadow-2xl">
                             <svg viewBox="0 0 100 240" className="w-[120px] md:w-[150px] h-auto">
                                 <rect x="38" y="0" width="24" height="240" rx="12" fill="#3a1a00" stroke="#D4AF37" strokeWidth="0.5" />
@@ -295,3 +440,4 @@
     </script>
 </body>
 </html>
+
